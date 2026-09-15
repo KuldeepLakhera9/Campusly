@@ -1,0 +1,297 @@
+import { IPost } from "@/types/post";
+import { IHangout } from "@/types/hangout";
+import { IConversation } from "@/types/message";
+import { IUser } from "@/types/user";
+
+export const MOCK_USER: IUser = {
+  email: "student@berkeley.edu",
+  emailVerified: true,
+  universityDomain: "berkeley.edu",
+  universityName: "UC Berkeley",
+  pseudonym: "Library Fox",
+  avatarColor: "#C15438",
+  avatarIcon: "LF",
+  major: "Cognitive Science & Design",
+  graduationYear: 2026,
+  bio: "Quiet researcher, fond of East Asian Library 3rd floor, late-night tea, and collaborative thinking without performative social media.",
+  interests: [
+    "Library Study",
+    "Architecture",
+    "Late Night Walks",
+    "Coffee & Tea",
+    "Analog Photography",
+    "Philosophy",
+  ],
+  sparksCount: 48,
+  privacySettings: {
+    hideMajor: false,
+    allowDirectMessages: true,
+    revealNameOnMutualFollow: false,
+    autoExpireHangouts: true,
+  },
+  createdAt: new Date("2025-09-01"),
+  updatedAt: new Date(),
+};
+
+export const MOCK_POSTS: IPost[] = [
+  {
+    _id: "post-1",
+    content:
+      "Is it just me, or does Doe Library 2nd floor hit a completely different wavelength around 11 PM? Everyone is quietly locked in, rain outside, zero social posturing. Best place to study on the entire West Coast.",
+    authorPseudonym: "Velvet Architect",
+    authorAvatarColor: "#244837",
+    campus: "UC Berkeley",
+    circle: "Academics",
+    upvotesCount: 42,
+    repliesCount: 9,
+    tags: ["DoeLibrary", "Focus"],
+    createdAt: new Date(Date.now() - 1000 * 60 * 25), // 25 mins ago
+  },
+  {
+    _id: "post-2",
+    content:
+      "Unpopular opinion: College would be 10x healthier if we stopped checking each other's Instagram follower counts and just showed up to spontaneous board game nights or coffee chats without needing an excuse.",
+    authorPseudonym: "Clocktower Owl",
+    authorAvatarColor: "#C15438",
+    campus: "UC Berkeley",
+    circle: "Campus Confessions",
+    upvotesCount: 88,
+    repliesCount: 23,
+    tags: ["Culture", "ZeroPressure"],
+    createdAt: new Date(Date.now() - 1000 * 60 * 75), // 1h ago
+  },
+  {
+    _id: "post-3",
+    content:
+      "Looking for 2 people who want to split a family-sized pizza from Artichoke and do a relaxed CS theory review on the glade before the sunset. No experience needed, just bring your notes.",
+    authorPseudonym: "Midnight Chemist",
+    authorAvatarColor: "#2A4365",
+    campus: "UC Berkeley",
+    circle: "Late Night",
+    upvotesCount: 31,
+    repliesCount: 5,
+    tags: ["Food", "CSReview"],
+    createdAt: new Date(Date.now() - 1000 * 60 * 180), // 3h ago
+  },
+  {
+    _id: "post-4",
+    content:
+      "PSA for anyone taking Econ 100B with Prof. Hawkins: The practice exam solutions have a typo on Question 4 regarding the IS-LM curve equilibrium. DM or check the study circle thread!",
+    authorPseudonym: "Humble Historian",
+    authorAvatarColor: "#744210",
+    campus: "UC Berkeley",
+    circle: "Course Advice",
+    upvotesCount: 64,
+    repliesCount: 14,
+    tags: ["Econ100B", "StudyTips"],
+    createdAt: new Date(Date.now() - 1000 * 60 * 320), // 5h ago
+  },
+];
+
+export const MOCK_HANGOUTS: IHangout[] = [
+  {
+    _id: "hangout-1",
+    title: "Deep Work Sprint (Pomodoro 50/10)",
+    description:
+      "Silent study sprint for midterms. We will do two 50-minute blocks with a quick tea break. Friendly, zero chatting during intervals.",
+    category: "Study",
+    campus: "UC Berkeley",
+    locationSpot: "East Asian Library, 2nd Floor corner reading room",
+    scheduledTime: new Date(Date.now() + 1000 * 60 * 15),
+    expiresAt: new Date(Date.now() + 1000 * 60 * 120),
+    maxParticipants: 4,
+    hostPseudonym: "North Quad Chemist",
+    hostAvatarColor: "#244837",
+    participants: [
+      {
+        pseudonym: "North Quad Chemist",
+        avatarColor: "#244837",
+        joinedAt: new Date(),
+      },
+      {
+        pseudonym: "Cedar Fox",
+        avatarColor: "#C15438",
+        joinedAt: new Date(),
+      },
+    ],
+    status: "open",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  {
+    _id: "hangout-2",
+    title: "Boba Run & Telegraph Ave Walk",
+    description:
+      "Heading to Feng Cha or Asha Tea House to decompress after lab. Anyone is welcome to tag along for a breath of fresh air.",
+    category: "Food & Drink",
+    campus: "UC Berkeley",
+    locationSpot: "Sather Gate fountain landmark",
+    scheduledTime: new Date(Date.now() + 1000 * 60 * 45),
+    expiresAt: new Date(Date.now() + 1000 * 60 * 150),
+    maxParticipants: 5,
+    hostPseudonym: "Autumn Runner",
+    hostAvatarColor: "#744210",
+    participants: [
+      {
+        pseudonym: "Autumn Runner",
+        avatarColor: "#744210",
+        joinedAt: new Date(),
+      },
+      {
+        pseudonym: "Observatory Seeker",
+        avatarColor: "#2A4365",
+        joinedAt: new Date(),
+      },
+      {
+        pseudonym: "Curious Philosopher",
+        avatarColor: "#702459",
+        joinedAt: new Date(),
+      },
+    ],
+    status: "open",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  {
+    _id: "hangout-3",
+    title: "Spikeball & Lawn Chill on Glade",
+    description:
+      "Have a Spikeball set and extra balls. Casual, no competitive sweat required. Just good vibes before sundown.",
+    category: "Sports & Fitness",
+    campus: "UC Berkeley",
+    locationSpot: "Memorial Glade near the big oak tree",
+    scheduledTime: new Date(Date.now() + 1000 * 60 * 90),
+    expiresAt: new Date(Date.now() + 1000 * 60 * 200),
+    maxParticipants: 6,
+    hostPseudonym: "Campus Rambler",
+    hostAvatarColor: "#9C3D26",
+    participants: [
+      {
+        pseudonym: "Campus Rambler",
+        avatarColor: "#9C3D26",
+        joinedAt: new Date(),
+      },
+    ],
+    status: "open",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  {
+    _id: "hangout-4",
+    title: "Sunset Sketching & Analog Cameras",
+    description:
+      "Bringing sketchbooks and a film camera up toward the Campanile. Perfect low-pressure way to wind down the afternoon.",
+    category: "Creative",
+    campus: "UC Berkeley",
+    locationSpot: "Campanile Esplanade benches",
+    scheduledTime: new Date(Date.now() + 1000 * 60 * 180),
+    expiresAt: new Date(Date.now() + 1000 * 60 * 300),
+    maxParticipants: 4,
+    hostPseudonym: "Echoing Bard",
+    hostAvatarColor: "#4A4A45",
+    participants: [
+      {
+        pseudonym: "Echoing Bard",
+        avatarColor: "#4A4A45",
+        joinedAt: new Date(),
+      },
+      {
+        pseudonym: "Perceptive Seeker",
+        avatarColor: "#244837",
+        joinedAt: new Date(),
+      },
+      {
+        pseudonym: "Quiet Architect",
+        avatarColor: "#2A4365",
+        joinedAt: new Date(),
+      },
+      {
+        pseudonym: "Autumn Fox",
+        avatarColor: "#C15438",
+        joinedAt: new Date(),
+      },
+    ],
+    status: "full",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+];
+
+export const MOCK_CONVERSATIONS: IConversation[] = [
+  {
+    id: "conv-1",
+    recipientPseudonym: "Velvet Architect",
+    recipientAvatarColor: "#244837",
+    recipientCircle: "Academics",
+    lastMessage: "Sounds great, I'm heading up to the 3rd floor now!",
+    lastMessageTime: "12m ago",
+    unreadCount: 1,
+    realIdentityRevealed: false,
+    messages: [
+      {
+        id: "m1",
+        senderPseudonym: "Velvet Architect",
+        senderAvatarColor: "#244837",
+        isCurrentUser: false,
+        content: "Hey Library Fox! Saw your post about the East Asian Library study sprint. Are there still quiet desks left?",
+        timestamp: "24m ago",
+      },
+      {
+        id: "m2",
+        senderPseudonym: "Library Fox",
+        senderAvatarColor: "#C15438",
+        isCurrentUser: true,
+        content: "Yes, grab the table by the south windows on floor 2. I have an extra power strip too if you need charging.",
+        timestamp: "18m ago",
+      },
+      {
+        id: "m3",
+        senderPseudonym: "Velvet Architect",
+        senderAvatarColor: "#244837",
+        isCurrentUser: false,
+        content: "Sounds great, I'm heading up to the 3rd floor now!",
+        timestamp: "12m ago",
+      },
+    ],
+  },
+  {
+    id: "conv-2",
+    recipientPseudonym: "Clocktower Owl",
+    recipientAvatarColor: "#2A4365",
+    recipientCircle: "Campus Confessions",
+    lastMessage: "Thanks for sharing the notes for the midterm.",
+    lastMessageTime: "3h ago",
+    unreadCount: 0,
+    realIdentityRevealed: false,
+    messages: [
+      {
+        id: "m2-1",
+        senderPseudonym: "Clocktower Owl",
+        senderAvatarColor: "#2A4365",
+        isCurrentUser: false,
+        content: "Thanks for sharing the notes for the midterm.",
+        timestamp: "3h ago",
+      },
+    ],
+  },
+  {
+    id: "conv-3",
+    recipientPseudonym: "Autumn Runner",
+    recipientAvatarColor: "#744210",
+    recipientCircle: "Sports & Fitness",
+    lastMessage: "We are meeting by Sather Gate at 5:15 PM.",
+    lastMessageTime: "Yesterday",
+    unreadCount: 0,
+    realIdentityRevealed: true,
+    messages: [
+      {
+        id: "m3-1",
+        senderPseudonym: "Autumn Runner (Sarah M.)",
+        senderAvatarColor: "#744210",
+        isCurrentUser: false,
+        content: "We are meeting by Sather Gate at 5:15 PM.",
+        timestamp: "Yesterday",
+      },
+    ],
+  },
+];
