@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { Modal } from "@/components/ui/modal";
+import { PublicProfileModal } from "@/components/profile/public-profile-modal";
 import { useAuth } from "@/components/providers/auth-provider";
 import { formatRelativeTime } from "@/lib/utils/formatters";
 import {
@@ -36,6 +37,7 @@ export default function HangoutDetailsPage() {
   const [isCancelling, setIsCancelling] = React.useState(false);
   const [isCopied, setIsCopied] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const [profileModalUserId, setProfileModalUserId] = React.useState<string | null>(null);
 
   // Fetch hangout details
   const fetchHangout = React.useCallback(async () => {
@@ -390,7 +392,12 @@ export default function HangoutDetailsPage() {
                 key={participant.userId || index}
                 className="p-3.5 flex items-center justify-between gap-3 bg-white"
               >
-                <div className="flex items-center gap-2.5 min-w-0">
+                <button
+                  type="button"
+                  onClick={() => participant.userId && setProfileModalUserId(participant.userId)}
+                  className="flex items-center gap-2.5 min-w-0 text-left group cursor-pointer focus:outline-none"
+                  disabled={!participant.userId}
+                >
                   <Avatar
                     moniker={participant.pseudonym}
                     avatarId={participant.avatarId}
@@ -398,14 +405,14 @@ export default function HangoutDetailsPage() {
                     size="sm"
                   />
                   <div className="min-w-0">
-                    <div className="text-xs font-bold text-campus-charcoal truncate">
+                    <div className="text-xs font-bold text-campus-charcoal group-hover:text-campus-accent transition-colors truncate">
                       {participant.pseudonym}
                     </div>
                     <div className="text-[10px] text-campus-muted">
                       Joined {formatRelativeTime(participant.joinedAt)}
                     </div>
                   </div>
-                </div>
+                </button>
 
                 {isParticipantHost && (
                   <Badge variant="subtle" size="sm">
@@ -422,11 +429,11 @@ export default function HangoutDetailsPage() {
       <Card className="p-4 bg-stone-50 border-stone-200 flex items-start gap-3">
         <ShieldCheck className="w-4 h-4 text-campus-accent shrink-0 mt-0.5" />
         <div className="space-y-1">
-          <div className="text-xs font-bold text-campus-charcoal">
-            Campusly Hangout Safety
-          </div>
+          <h4 className="text-xs font-bold text-campus-charcoal">
+            Campus Meetup Guidelines
+          </h4>
           <p className="text-[11px] text-campus-muted leading-relaxed">
-            Meetups occur strictly in public campus locations (canteens, libraries, sports grounds). Your real identity is protected—only reveal your real name when mutual in-person comfort is established.
+            Spontaneous meetups take place in public campus areas. Keep communication friendly, respect peer pseudonyms, and adhere to your university honor code.
           </p>
         </div>
       </Card>
@@ -464,6 +471,13 @@ export default function HangoutDetailsPage() {
           </div>
         </div>
       </Modal>
+
+      {/* Public Profile Modal */}
+      <PublicProfileModal
+        userId={profileModalUserId}
+        isOpen={Boolean(profileModalUserId)}
+        onClose={() => setProfileModalUserId(null)}
+      />
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { ReportReason, REPORT_REASONS } from "@/types/post";
 export interface IReportDocument extends Document {
   reporter: mongoose.Types.ObjectId;
   target: mongoose.Types.ObjectId;
-  targetType: "post" | "comment";
+  targetType: "post" | "comment" | "message" | "user";
   reason: ReportReason;
   details?: string;
   status: "pending" | "reviewed" | "dismissed";
@@ -28,7 +28,7 @@ const ReportSchema = new Schema<IReportDocument>(
     targetType: {
       type: String,
       required: true,
-      enum: ["post", "comment"],
+      enum: ["post", "comment", "message", "user"],
       index: true,
     },
     reason: {

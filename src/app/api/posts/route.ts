@@ -142,6 +142,7 @@ export async function GET(req: NextRequest) {
         isAuthor,
         createdAt: p.createdAt ? new Date(p.createdAt).toISOString() : new Date().toISOString(),
         author: {
+          id: authorIdStr,
           username: p.authorPseudonym || "Campus Student",
           avatarId: p.authorAvatarId || "terracotta-prism",
           avatarColor: p.authorAvatarColor || "#C15438",

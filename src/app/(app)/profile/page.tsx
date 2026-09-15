@@ -59,6 +59,46 @@ export default function ProfilePage() {
     loadStats();
   }, []);
 
+  // Blocked Users state
+  const [blockedUsers, setBlockedUsers] = React.useState<
+    Array<{ id: string; username: string; avatarId: string; avatarColor: string; collegeName: string }>
+  >([]);
+  const [isLoadingBlocked, setIsLoadingBlocked] = React.useState(false);
+
+  React.useEffect(() => {
+    if (activeTab !== "privacy") return;
+    let isMounted = true;
+    async function loadBlocked() {
+      setIsLoadingBlocked(true);
+      try {
+        const res = await fetch("/api/users/blocked");
+        if (res.ok && isMounted) {
+          const data = await res.json();
+          setBlockedUsers(data.blockedUsers || []);
+        }
+      } catch (err) {
+        console.error("Failed to load blocked users:", err);
+      } finally {
+        if (isMounted) setIsLoadingBlocked(false);
+      }
+    }
+    loadBlocked();
+    return () => {
+      isMounted = false;
+    };
+  }, [activeTab]);
+
+  const handleUnblockUser = async (userId: string) => {
+    try {
+      const res = await fetch(`/api/users/${userId}/block`, { method: "DELETE" });
+      if (res.ok) {
+        setBlockedUsers((prev) => prev.filter((u) => u.id !== userId));
+      }
+    } catch (err) {
+      console.error("Unblock failed:", err);
+    }
+  };
+
   // Initialize edit form when opening modal
   const openEditModal = () => {
     if (user) {
@@ -297,7 +337,8 @@ export default function ProfilePage() {
 
       {/* Tab 2: Privacy Controls */}
       {activeTab === "privacy" && (
-        <Card className="p-6 bg-white space-y-6">
+        <div className="space-y-6">
+          <Card className="p-6 bg-white space-y-6">
           <div>
             <h2 className="font-serif text-lg font-medium text-campus-charcoal">
               Privacy Architecture
@@ -410,6 +451,62 @@ export default function ProfilePage() {
             </div>
           </div>
         </Card>
+
+        {/* Blocked Students Section */}
+        <Card className="p-6 bg-white border-campus-border/80 shadow-xs">
+          <div className="pb-4 border-b border-campus-border/60">
+            <h3 className="text-base font-bold text-campus-charcoal">
+              Blocked Students
+            </h3>
+            <p className="text-xs text-campus-muted mt-1">
+              Students you have blocked will not be able to message you.
+            </p>
+          </div>
+
+          <div className="mt-4">
+            {isLoadingBlocked ? (
+              <p className="text-xs text-campus-muted py-4 text-center">
+                Loading blocked list...
+              </p>
+            ) : blockedUsers.length > 0 ? (
+              <div className="divide-y divide-campus-border/50">
+                {blockedUsers.map((bu) => (
+                  <div key={bu.id} className="py-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Avatar
+                        moniker={bu.username}
+                        avatarId={bu.avatarId}
+                        color={bu.avatarColor}
+                        size="sm"
+                      />
+                      <div>
+                        <span className="text-xs font-bold text-campus-charcoal block">
+                          {bu.username}
+                        </span>
+                        <span className="text-[10px] text-campus-muted">
+                          {bu.collegeName}
+                        </span>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleUnblockUser(bu.id)}
+                      className="text-xs"
+                    >
+                      Unblock
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-campus-muted py-3 text-center">
+                You haven&apos;t blocked any students.
+              </p>
+            )}
+          </div>
+        </Card>
+      </div>
       )}
 
       {/* EDIT PROFILE MODAL */}

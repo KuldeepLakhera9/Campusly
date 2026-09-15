@@ -1,24 +1,40 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface IMessageDocument extends Document {
-  conversationId: string;
+  conversationId: mongoose.Types.ObjectId;
+  sender: mongoose.Types.ObjectId;
   senderPseudonym: string;
+  senderAvatarId: string;
   senderAvatarColor: string;
   content: string;
-  read: boolean;
+  isDeleted: boolean;
+  deletedAt?: Date;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 const MessageSchema = new Schema<IMessageDocument>(
   {
     conversationId: {
-      type: String,
+      type: Schema.Types.ObjectId,
+      ref: "Conversation",
+      required: true,
+      index: true,
+    },
+    sender: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
       required: true,
       index: true,
     },
     senderPseudonym: {
       type: String,
       required: true,
+      trim: true,
+    },
+    senderAvatarId: {
+      type: String,
+      default: "terracotta-prism",
     },
     senderAvatarColor: {
       type: String,
@@ -27,17 +43,30 @@ const MessageSchema = new Schema<IMessageDocument>(
     content: {
       type: String,
       required: true,
+      trim: true,
       maxlength: 1000,
     },
-    read: {
+    isDeleted: {
       type: Boolean,
       default: false,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
     },
   },
   {
     timestamps: true,
   }
 );
+
+// Compound index for chronological cursor-based pagination
+MessageSchema.index({ conversationId: 1, createdAt: -1 });
+MessageSchema.index({ conversationId: 1, isDeleted: 1, createdAt: -1 });
+
+if (process.env.NODE_ENV !== "production" && mongoose.models.Message) {
+  delete (mongoose.models as Record<string, unknown>).Message;
+}
 
 export const Message: Model<IMessageDocument> =
   mongoose.models.Message ||

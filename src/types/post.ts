@@ -36,6 +36,7 @@ export const POST_CATEGORIES: PostCategory[] = [
 export type PostSortOption = "latest" | "popular" | "trending";
 
 export interface IPostAuthor {
+  id?: string;
   username: string;
   avatarId: string;
   avatarColor: string;

@@ -10,6 +10,7 @@ import { formatRelativeTime } from "@/lib/utils/formatters";
 import { useAuth } from "@/components/providers/auth-provider";
 import { ReportModal } from "@/components/feed/report-modal";
 import { Modal } from "@/components/ui/modal";
+import { PublicProfileModal } from "@/components/profile/public-profile-modal";
 import {
   Heart,
   MessageSquare,
@@ -62,6 +63,9 @@ export function PostCard({ post, onPostDeleted }: PostCardProps) {
     type: "post" | "comment";
     author: string;
   } | null>(null);
+
+  // Public Profile Modal state
+  const [profileModalUserId, setProfileModalUserId] = React.useState<string | null>(null);
 
   // Check if current user is the post author
   const isPostAuthor =
@@ -207,7 +211,12 @@ export function PostCard({ post, onPostDeleted }: PostCardProps) {
       >
         {/* Author Bar */}
         <div className="flex items-center justify-between gap-3 mb-3">
-          <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => post.author?.id && setProfileModalUserId(post.author.id)}
+            className="flex items-center gap-2.5 text-left group cursor-pointer focus:outline-none"
+            disabled={!post.author?.id}
+          >
             <Avatar
               moniker={authorName}
               avatarId={avatarId}
@@ -216,7 +225,7 @@ export function PostCard({ post, onPostDeleted }: PostCardProps) {
             />
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-campus-charcoal">
+                <span className="text-xs font-bold text-campus-charcoal group-hover:text-campus-accent transition-colors">
                   {authorName}
                 </span>
                 <span className="text-[11px] text-campus-subtle">•</span>
@@ -228,7 +237,7 @@ export function PostCard({ post, onPostDeleted }: PostCardProps) {
                 {post.collegeName || post.campus || "Accredited Campus"}
               </div>
             </div>
-          </div>
+          </button>
 
           <div className="flex items-center gap-2">
             <Badge variant="outline" size="sm">
@@ -519,6 +528,13 @@ export function PostCard({ post, onPostDeleted }: PostCardProps) {
           targetAuthor={reportTarget.author}
         />
       )}
+
+      {/* Public Profile Modal */}
+      <PublicProfileModal
+        userId={profileModalUserId}
+        isOpen={Boolean(profileModalUserId)}
+        onClose={() => setProfileModalUserId(null)}
+      />
     </>
   );
 }

@@ -11,6 +11,7 @@ export interface ModalProps {
   subtitle?: string;
   children: React.ReactNode;
   maxWidth?: "sm" | "md" | "lg" | "xl";
+  size?: "sm" | "md" | "lg" | "xl";
 }
 
 export function Modal({
@@ -20,7 +21,9 @@ export function Modal({
   subtitle,
   children,
   maxWidth = "md",
+  size,
 }: ModalProps) {
+  const effectiveWidth = size || maxWidth;
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -57,7 +60,7 @@ export function Modal({
       <div
         className={cn(
           "relative w-full bg-white rounded-xl border border-campus-border shadow-xl z-10 overflow-hidden my-auto",
-          widthClasses[maxWidth]
+          widthClasses[effectiveWidth]
         )}
         role="dialog"
         aria-modal="true"
