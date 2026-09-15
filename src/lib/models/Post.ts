@@ -1,67 +1,119 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
-import { IPost, CampusCircle } from "@/types/post";
+import { PostCategory, POST_CATEGORIES } from "@/types/post";
 
-export interface IPostDocument extends Omit<IPost, "_id">, Document {}
+export interface IPostDocument extends Document {
+  author: mongoose.Types.ObjectId;
+  authorPseudonym: string;
+  authorAvatarId: string;
+  authorAvatarColor: string;
+  collegeName: string;
+  collegeDomain: string;
+  content: string;
+  category: PostCategory;
+  reactionCount: number;
+  commentCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+
+  // Backward compatibility getters
+  upvotesCount?: number;
+  repliesCount?: number;
+  circle?: string;
+  campus?: string;
+}
 
 const PostSchema = new Schema<IPostDocument>(
   {
-    content: {
-      type: String,
+    author: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
       required: true,
-      trim: true,
-      maxlength: 1000,
+      index: true,
     },
     authorPseudonym: {
       type: String,
       required: true,
+      trim: true,
       index: true,
+    },
+    authorAvatarId: {
+      type: String,
+      default: "terracotta-prism",
     },
     authorAvatarColor: {
       type: String,
       default: "#C15438",
     },
-    authorUserId: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
-    },
-    campus: {
+    collegeName: {
       type: String,
       required: true,
       default: "UC Berkeley",
+      trim: true,
     },
-    circle: {
+    collegeDomain: {
       type: String,
       required: true,
-      enum: [
-        "All Circles",
-        "Academics",
-        "Dorm Life",
-        "Late Night",
-        "Course Advice",
-        "Lost & Found",
-        "Campus Confessions",
-        "Opportunities",
-      ] as CampusCircle[],
-      default: "Academics",
+      default: "berkeley.edu",
+      lowercase: true,
+      trim: true,
       index: true,
     },
-    upvotesCount: {
+    content: {
+      type: String,
+      required: true,
+      trim: true,
+      minlength: 3,
+      maxlength: 2000,
+    },
+    category: {
+      type: String,
+      required: true,
+      enum: POST_CATEGORIES,
+      default: "Discussion",
+      index: true,
+    },
+    reactionCount: {
       type: Number,
       default: 0,
+      min: 0,
     },
-    repliesCount: {
+    commentCount: {
       type: Number,
       default: 0,
-    },
-    tags: {
-      type: [String],
-      default: [],
+      min: 0,
     },
   },
   {
     timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
+
+// Compound indexes for high performance feed retrieval
+PostSchema.index({ collegeDomain: 1, createdAt: -1 });
+PostSchema.index({ collegeDomain: 1, category: 1, createdAt: -1 });
+PostSchema.index({ author: 1, createdAt: -1 });
+
+// Text index for search functionality
+PostSchema.index({ content: "text", category: "text" });
+
+// Virtuals for backward compatibility with Phase 1 components
+PostSchema.virtual("upvotesCount").get(function () {
+  return this.reactionCount;
+});
+
+PostSchema.virtual("repliesCount").get(function () {
+  return this.commentCount;
+});
+
+PostSchema.virtual("circle").get(function () {
+  return this.category;
+});
+
+PostSchema.virtual("campus").get(function () {
+  return this.collegeName;
+});
 
 export const Post: Model<IPostDocument> =
   mongoose.models.Post || mongoose.model<IPostDocument>("Post", PostSchema);

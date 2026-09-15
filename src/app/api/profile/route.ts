@@ -22,7 +22,10 @@ export async function GET() {
 
     // Query real public stats
     const postsCount = await Post.countDocuments({
-      authorPseudonym: currentUser.publicIdentity.username,
+      $or: [
+        { author: currentUser.id },
+        { authorPseudonym: currentUser.publicIdentity.username },
+      ],
     });
 
     const hangoutsCount = await Hangout.countDocuments({

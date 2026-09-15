@@ -7,7 +7,7 @@ export interface AvatarProps extends React.HTMLAttributes<HTMLDivElement> {
   moniker?: string;
   avatarId?: string;
   color?: string;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "xs" | "sm" | "md" | "lg" | "xl";
 }
 
 export function Avatar({
@@ -24,6 +24,7 @@ export function Avatar({
   const initials = getMonikerInitials(moniker);
 
   const sizeClasses = {
+    xs: "w-6 h-6 text-[10px] font-semibold rounded-md",
     sm: "w-7 h-7 text-[11px] font-semibold rounded-md",
     md: "w-9 h-9 text-xs font-bold rounded-lg",
     lg: "w-11 h-11 text-sm font-bold rounded-lg",

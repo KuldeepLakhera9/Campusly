@@ -2,4 +2,7 @@ export * from "./College";
 export * from "./User";
 export * from "./Hangout";
 export * from "./Post";
+export * from "./Comment";
+export * from "./Reaction";
+export * from "./Report";
 export * from "./Message";

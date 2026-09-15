@@ -13,6 +13,7 @@ function getSecretKey(): Uint8Array {
 // Protected application routes that require a logged-in user
 const PROTECTED_ROUTES = [
   "/explore",
+  "/feed",
   "/hangouts",
   "/messages",
   "/profile",
@@ -90,6 +91,7 @@ export async function middleware(req: NextRequest) {
 export const config = {
   matcher: [
     "/explore/:path*",
+    "/feed/:path*",
     "/hangouts/:path*",
     "/messages/:path*",
     "/profile/:path*",
