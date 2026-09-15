@@ -5,6 +5,8 @@ import Link from "next/link";
 import { IPost, PostCategory, POST_CATEGORIES, PostSortOption } from "@/types/post";
 import { PostCard } from "@/components/feed/post-card";
 import { CreatePostModal } from "@/components/feed/create-post-modal";
+import { CreateHangoutModal } from "@/components/hangouts/create-hangout-modal";
+import { IHangout } from "@/types/hangout";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
@@ -51,6 +53,27 @@ export default function ExplorePage() {
   const [hasMore, setHasMore] = React.useState(false);
   const [isLoadingMore, setIsLoadingMore] = React.useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
+  const [isHangoutModalOpen, setIsHangoutModalOpen] = React.useState(false);
+  const [todayHangouts, setTodayHangouts] = React.useState<IHangout[]>([]);
+
+  // Fetch live hangouts for sidebar
+  React.useEffect(() => {
+    let isMounted = true;
+    Promise.resolve().then(async () => {
+      try {
+        const res = await fetch("/api/hangouts?limit=3");
+        const data = await res.json();
+        if (isMounted && res.ok && data.hangouts) {
+          setTodayHangouts(data.hangouts);
+        }
+      } catch (err) {
+        console.error("Failed to load sidebar hangouts:", err);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Debounce search query
   React.useEffect(() => {
@@ -251,16 +274,27 @@ export default function ExplorePage() {
               </p>
             </div>
 
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => setIsCreateModalOpen(true)}
-              className="shrink-0"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Start a conversation</span>
-              <span className="sm:hidden">Post</span>
-            </Button>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsHangoutModalOpen(true)}
+                className="hidden sm:inline-flex text-xs"
+              >
+                <Flame className="w-3.5 h-3.5 text-campus-accent mr-1" />
+                <span>Host Hangout</span>
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setIsCreateModalOpen(true)}
+                className="shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">Start a conversation</span>
+                <span className="sm:hidden">Post</span>
+              </Button>
+            </div>
           </div>
 
           {/* Search Bar */}
@@ -305,23 +339,40 @@ export default function ExplorePage() {
           </div>
 
           {/* Quick Composer Trigger Card */}
-          <Card
-            interactive
-            onClick={() => setIsCreateModalOpen(true)}
-            className="p-4 bg-white/90 flex items-center gap-3 border-dashed hover:border-campus-accent/70 transition-all cursor-pointer"
-          >
-            <Avatar
-              moniker={username}
-              avatarId={avatarId}
-              color={avatarColor}
-              size="sm"
-            />
-            <div className="text-xs sm:text-sm text-campus-muted flex-1 font-normal select-none truncate">
-              What&apos;s happening on campus? Start a conversation as {username}...
+          <Card className="p-4 bg-white/90 border-dashed border-campus-border hover:border-campus-accent/70 transition-all">
+            <div className="flex items-center gap-3">
+              <Avatar
+                moniker={username}
+                avatarId={avatarId}
+                color={avatarColor}
+                size="sm"
+              />
+              <div
+                onClick={() => setIsCreateModalOpen(true)}
+                className="text-xs sm:text-sm text-campus-muted flex-1 font-normal select-none truncate cursor-pointer"
+              >
+                What&apos;s happening on campus? Share a thought as {username}...
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setIsHangoutModalOpen(true)}
+                  className="text-xs py-1 px-2.5 hidden sm:inline-flex"
+                >
+                  <Flame className="w-3 h-3 text-campus-accent mr-1" />
+                  <span>Hangout</span>
+                </Button>
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="text-xs py-1 px-2.5"
+                >
+                  <span>Post</span>
+                </Button>
+              </div>
             </div>
-            <Button size="sm" variant="outline" className="hidden sm:inline-flex text-xs shrink-0">
-              Share
-            </Button>
           </Card>
 
           {/* Sorting Tabs Bar */}
@@ -438,39 +489,37 @@ export default function ExplorePage() {
             </div>
 
             <div className="space-y-3">
-              <div className="p-3 bg-campus-bg/60 rounded-lg border border-campus-border/70 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-semibold text-campus-accent">
-                    Coffee & Code
-                  </span>
-                  <span className="text-[10px] text-campus-muted">
-                    2 spots left
-                  </span>
+              {todayHangouts.length > 0 ? (
+                todayHangouts.map((h) => {
+                  const spotsLeft = Math.max(0, h.maxParticipants - (h.participantsCount ?? 1));
+                  return (
+                    <Link
+                      key={h._id}
+                      href={`/hangouts/${h._id}`}
+                      className="block p-3 bg-stone-50 rounded-lg border border-campus-border/70 space-y-1.5 hover:border-campus-accent/70 transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-semibold text-campus-accent">
+                          {h.activity}
+                        </span>
+                        <span className="text-[10px] text-campus-muted">
+                          {spotsLeft === 0 ? "Full" : `${spotsLeft} spots left`}
+                        </span>
+                      </div>
+                      <div className="text-xs font-semibold text-campus-charcoal leading-snug truncate">
+                        {h.title}
+                      </div>
+                      <div className="text-[11px] text-campus-muted truncate">
+                        📍 {h.location} • {h.startTime}
+                      </div>
+                    </Link>
+                  );
+                })
+              ) : (
+                <div className="text-center py-4 text-xs text-campus-muted">
+                  No hangouts scheduled today yet.
                 </div>
-                <div className="text-xs font-semibold text-campus-charcoal leading-snug">
-                  Working on algorithms at MLK Library cafe
-                </div>
-                <div className="text-[11px] text-campus-muted truncate">
-                  📍 MLK Library, 2nd Floor
-                </div>
-              </div>
-
-              <div className="p-3 bg-campus-bg/60 rounded-lg border border-campus-border/70 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-semibold text-campus-accent">
-                    Pick-up Match
-                  </span>
-                  <span className="text-[10px] text-campus-muted">
-                    4 spots left
-                  </span>
-                </div>
-                <div className="text-xs font-semibold text-campus-charcoal leading-snug">
-                  Badminton / Table tennis after 5 PM
-                </div>
-                <div className="text-[11px] text-campus-muted truncate">
-                  📍 Student Recreation Center
-                </div>
-              </div>
+              )}
             </div>
           </Card>
 
@@ -494,6 +543,13 @@ export default function ExplorePage() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onPostCreated={handlePostCreated}
+      />
+
+      {/* Create Hangout Modal */}
+      <CreateHangoutModal
+        isOpen={isHangoutModalOpen}
+        onClose={() => setIsHangoutModalOpen(false)}
+        onSuccess={(h) => setTodayHangouts((prev) => [h, ...prev])}
       />
     </div>
   );

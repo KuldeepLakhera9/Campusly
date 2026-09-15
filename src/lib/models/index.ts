@@ -1,6 +1,7 @@
 export * from "./College";
 export * from "./User";
 export * from "./Hangout";
+export * from "./Activity";
 export * from "./Post";
 export * from "./Comment";
 export * from "./Reaction";

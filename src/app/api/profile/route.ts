@@ -29,7 +29,11 @@ export async function GET() {
     });
 
     const hangoutsCount = await Hangout.countDocuments({
-      hostPseudonym: currentUser.publicIdentity.username,
+      $or: [
+        { creator: currentUser.id },
+        { "participants.userId": currentUser.id },
+        { hostPseudonym: currentUser.publicIdentity.username },
+      ],
     });
 
     return NextResponse.json({

@@ -3,31 +3,53 @@ import { z } from "zod";
 export const createHangoutSchema = z.object({
   title: z
     .string()
-    .min(5, "Title must be at least 5 characters.")
-    .max(100, "Title is too long (max 100 characters)."),
+    .trim()
+    .min(3, "Title must contain at least 3 characters.")
+    .max(120, "Title cannot exceed 120 characters."),
   description: z
     .string()
-    .min(10, "Please provide a brief description.")
-    .max(400, "Description max 400 characters."),
-  category: z.enum([
-    "Study",
-    "Food & Drink",
-    "Campus Walk",
-    "Sports & Fitness",
-    "Gaming",
-    "Creative",
-    "Late Night",
-    "Other",
-  ]),
-  locationSpot: z
+    .trim()
+    .max(1000, "Description cannot exceed 1,000 characters.")
+    .optional()
+    .default(""),
+  activity: z
     .string()
-    .min(3, "Specific spot is required (e.g., 'Main Library 2nd Floor West').")
-    .max(100),
+    .trim()
+    .min(2, "Activity is required.")
+    .max(50, "Activity name is too long."),
+  location: z
+    .string()
+    .trim()
+    .min(2, "Please provide a campus spot.")
+    .max(120, "Location cannot exceed 120 characters."),
+  date: z
+    .string()
+    .min(1, "Date is required."),
+  startTime: z
+    .string()
+    .min(1, "Start time is required."),
+  endTime: z
+    .string()
+    .optional(),
   maxParticipants: z
+    .coerce
     .number()
-    .min(2, "Minimum 2 people.")
-    .max(20, "Maximum 20 people for spontaneous groups."),
-  durationHours: z.number().min(1).max(6).default(2),
+    .int()
+    .min(2, "Capacity must be at least 2 students.")
+    .max(30, "Capacity cannot exceed 30 students.")
+    .default(4),
+  shareToFeed: z
+    .boolean()
+    .optional()
+    .default(true),
 });
 
-export type CreateHangoutInput = z.infer<typeof createHangoutSchema>;
+export const hangoutQuerySchema = z.object({
+  activity: z.string().optional(),
+  dateFilter: z.enum(["all", "today", "tomorrow", "this_week"]).default("all"),
+  availability: z.enum(["all", "has_spots", "almost_full"]).default("all"),
+  search: z.string().optional(),
+  scope: z.enum(["all", "created", "joined"]).default("all"),
+  limit: z.coerce.number().min(1).max(50).default(20),
+  cursor: z.string().optional(),
+});
