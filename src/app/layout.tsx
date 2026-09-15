@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Newsreader } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "@/components/providers/auth-provider";
 
 const geist = Geist({
   variable: "--font-geist-sans",
@@ -39,7 +40,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geist.variable} ${newsreader.variable}`}>
       <body className="min-h-screen bg-campus-bg text-campus-charcoal selection:bg-campus-accent-soft selection:text-campus-accent antialiased flex flex-col font-sans">
-        {children}
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

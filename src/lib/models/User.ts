@@ -13,51 +13,22 @@ const UserPrivacySchema = new Schema(
   { _id: false }
 );
 
-const UserSchema = new Schema<IUserDocument>(
+const PublicIdentitySchema = new Schema(
   {
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      lowercase: true,
-      trim: true,
-      index: true,
-    },
-    emailVerified: {
-      type: Boolean,
-      default: false,
-    },
-    universityDomain: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    universityName: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    pseudonym: {
+    username: {
       type: String,
       required: true,
       unique: true,
       trim: true,
       index: true,
+    },
+    avatarId: {
+      type: String,
+      default: "terracotta-prism",
     },
     avatarColor: {
       type: String,
       default: "#C15438",
-    },
-    avatarIcon: {
-      type: String,
-      default: "CO",
-    },
-    major: {
-      type: String,
-      trim: true,
-    },
-    graduationYear: {
-      type: Number,
     },
     bio: {
       type: String,
@@ -68,6 +39,70 @@ const UserSchema = new Schema<IUserDocument>(
       type: [String],
       default: [],
     },
+  },
+  { _id: false }
+);
+
+const UserSchema = new Schema<IUserDocument>(
+  {
+    // PRIVATE ACCOUNT INFORMATION
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+      index: true,
+    },
+    passwordHash: {
+      type: String,
+      required: true,
+    },
+    collegeId: {
+      type: Schema.Types.ObjectId,
+      ref: "College",
+    },
+    collegeName: {
+      type: String,
+      required: true,
+      default: "UC Berkeley",
+      trim: true,
+    },
+    collegeDomain: {
+      type: String,
+      required: true,
+      default: "berkeley.edu",
+      lowercase: true,
+      trim: true,
+    },
+    emailVerified: {
+      type: Boolean,
+      default: true,
+    },
+    role: {
+      type: String,
+      enum: ["student", "moderator", "admin"],
+      default: "student",
+    },
+    status: {
+      type: String,
+      enum: ["active", "suspended", "pending"],
+      default: "active",
+      index: true,
+    },
+    onboardingCompleted: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+
+    // PUBLIC IDENTITY (visible to other students)
+    publicIdentity: {
+      type: PublicIdentitySchema,
+      required: true,
+    },
+
+    // REPUTATION & PRIVACY
     sparksCount: {
       type: Number,
       default: 10,
@@ -81,6 +116,23 @@ const UserSchema = new Schema<IUserDocument>(
     timestamps: true,
   }
 );
+
+// Virtuals for backward compatibility with Phase 1 components
+UserSchema.virtual("pseudonym").get(function () {
+  return this.publicIdentity?.username;
+});
+
+UserSchema.virtual("avatarColor").get(function () {
+  return this.publicIdentity?.avatarColor;
+});
+
+UserSchema.virtual("interests").get(function () {
+  return this.publicIdentity?.interests;
+});
+
+UserSchema.virtual("bio").get(function () {
+  return this.publicIdentity?.bio;
+});
 
 export const User: Model<IUserDocument> =
   mongoose.models.User || mongoose.model<IUserDocument>("User", UserSchema);

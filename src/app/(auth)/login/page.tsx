@@ -2,44 +2,67 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "@/components/providers/auth-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
-import { ShieldCheck, ArrowLeft } from "lucide-react";
+import { ShieldCheck, ArrowLeft, AlertCircle } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/explore";
+  const { refreshUser } = useAuth();
+
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) {
-      setError("Please enter your university email.");
-      return;
-    }
-
-    if (!email.includes(".edu") && !email.includes(".ac.")) {
-      setError("Please use an accredited .edu or university domain.");
+    if (!email.trim() || !password) {
+      setError("Please enter your university email and password.");
       return;
     }
 
     setIsLoading(true);
     setError(null);
 
-    // Simulate login for Phase 1
-    setTimeout(() => {
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setError(data.error || "Invalid email or password.");
+        setIsLoading(false);
+        return;
+      }
+
+      await refreshUser();
+
+      // If user hasn't finished onboarding, route to /onboarding
+      if (data.user && !data.user.onboardingCompleted) {
+        router.push("/onboarding");
+      } else {
+        router.push(callbackUrl);
+      }
+      router.refresh();
+    } catch (err) {
+      console.error("Login request error:", err);
+      setError("An unexpected error occurred. Please try again.");
       setIsLoading(false);
-      router.push("/explore");
-    }, 600);
+    }
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-center items-center p-4 sm:p-6 bg-campus-bg">
-      {/* Back button */}
+    <div className="min-h-screen flex flex-col justify-center items-center p-4 sm:p-6 bg-campus-bg text-campus-charcoal">
       <div className="w-full max-w-md mb-4 text-left">
         <Link
           href="/"
@@ -56,29 +79,30 @@ export default function LoginPage() {
             CAMPUSLY
           </Link>
           <h1 className="font-serif text-xl font-medium text-campus-charcoal mt-2">
-            Welcome back to campus
+            Welcome Back to Campus
           </h1>
           <p className="text-xs text-campus-muted mt-1">
-            Sign in with your verified university credentials.
+            Sign in with your verified collegiate credentials.
           </p>
         </CardHeader>
 
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4 pt-2">
             {error && (
-              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg">
-                {error}
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{error}</span>
               </div>
             )}
 
             <Input
               label="University Email"
               type="email"
-              placeholder="yourname@berkeley.edu"
+              placeholder="student@berkeley.edu"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              helperText="Must end in .edu or your college domain"
+              helperText="Must be your official college email domain"
             />
 
             <Input
@@ -97,22 +121,18 @@ export default function LoginPage() {
                   defaultChecked
                   className="rounded border-campus-border text-campus-accent focus:ring-campus-accent"
                 />
-                <span>Remember this device</span>
+                <span>Keep me signed in</span>
               </label>
 
-              <button
-                type="button"
-                className="text-campus-accent hover:underline font-medium"
-              >
-                Forgot password?
-              </button>
+              <span className="text-campus-muted text-xs">
+                Encrypted Session
+              </span>
             </div>
 
-            {/* Privacy Guarantee callout */}
-            <div className="p-3 bg-stone-50 border border-stone-200/90 rounded-lg flex items-start gap-2 text-xs text-campus-muted">
+            <div className="p-3 bg-stone-50 border border-stone-200/80 rounded-lg flex items-start gap-2 text-xs text-campus-muted">
               <ShieldCheck className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
               <span>
-                Your real name and email remain encrypted and are never visible on public feeds.
+                Anonymous to other students, accountable to Campusly. Your real email is never exposed publicly.
               </span>
             </div>
           </CardContent>
