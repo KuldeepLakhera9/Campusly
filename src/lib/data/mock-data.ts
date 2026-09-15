@@ -41,6 +41,8 @@ export const MOCK_USER: IUser = {
     allowDirectMessages: true,
     revealNameOnMutualFollow: false,
     autoExpireHangouts: true,
+    appearInFindPeople: true,
+    showInterests: true,
   },
   createdAt: new Date("2025-09-01"),
   updatedAt: new Date(),

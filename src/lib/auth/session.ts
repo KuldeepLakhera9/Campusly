@@ -109,6 +109,7 @@ export async function getCurrentUserSafe(): Promise<ISafeUser | null> {
         avatarColor: userDoc.publicIdentity?.avatarColor || "#C15438",
         bio: userDoc.publicIdentity?.bio || "",
         interests: userDoc.publicIdentity?.interests || [],
+        lookingFor: userDoc.publicIdentity?.lookingFor || [],
       },
       sparksCount: userDoc.sparksCount ?? 10,
       privacySettings: {
@@ -117,6 +118,8 @@ export async function getCurrentUserSafe(): Promise<ISafeUser | null> {
         revealNameOnMutualFollow:
           userDoc.privacySettings?.revealNameOnMutualFollow ?? false,
         autoExpireHangouts: userDoc.privacySettings?.autoExpireHangouts ?? true,
+        appearInFindPeople: userDoc.privacySettings?.appearInFindPeople ?? true,
+        showInterests: userDoc.privacySettings?.showInterests ?? true,
       },
       createdAt: userDoc.createdAt ? userDoc.createdAt.toISOString() : new Date().toISOString(),
     };

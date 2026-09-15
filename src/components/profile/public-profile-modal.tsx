@@ -15,6 +15,7 @@ export interface PublicProfileData {
   avatarColor: string;
   bio?: string;
   interests?: string[];
+  lookingFor?: string[];
   sparksCount?: number;
   collegeName?: string;
   isCurrentUser?: boolean;
@@ -115,9 +116,9 @@ export function PublicProfileModal({
           </Button>
         </div>
       ) : profile ? (
-        <div className="space-y-6 pt-2">
+        <div className="space-y-5 pt-1">
           {/* Header Card */}
-          <div className="flex items-center gap-4 p-4 rounded-xl bg-campus-bg/50 border border-campus-border/60">
+          <div className="flex items-center gap-4 p-4 rounded-xl bg-campus-bg/60 border border-campus-border/70">
             <Avatar
               moniker={profile.username}
               avatarId={profile.avatarId}
@@ -135,6 +136,19 @@ export function PublicProfileModal({
                 </span>
               </div>
               <p className="text-xs text-campus-muted mt-0.5">{profile.collegeName}</p>
+
+              {/* Public Activity Counts */}
+              {profile.stats && (
+                <div className="flex items-center gap-3 mt-2 text-[11px] text-campus-muted">
+                  <span className="font-medium text-campus-charcoal">
+                    {profile.stats.posts} {profile.stats.posts === 1 ? "post" : "posts"}
+                  </span>
+                  <span>•</span>
+                  <span className="font-medium text-campus-charcoal">
+                    {profile.stats.hangouts} {profile.stats.hangouts === 1 ? "hangout" : "hangouts"}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -152,14 +166,35 @@ export function PublicProfileModal({
 
           {/* Campus Interests */}
           {profile.interests && profile.interests.length > 0 && (
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <span className="text-[11px] uppercase tracking-wider font-semibold text-campus-muted">
-                Campus Interests
+                Interests
               </span>
               <div className="flex flex-wrap gap-1.5">
                 {profile.interests.map((interest) => (
                   <Badge key={interest} variant="outline" size="sm">
                     {interest}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Activity / Collaboration Preferences */}
+          {profile.lookingFor && profile.lookingFor.length > 0 && (
+            <div className="space-y-1.5">
+              <span className="text-[11px] uppercase tracking-wider font-semibold text-campus-muted">
+                Usually Looking For
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {profile.lookingFor.map((intent) => (
+                  <Badge
+                    key={intent}
+                    variant="accent"
+                    size="sm"
+                    className="bg-amber-50 text-amber-900 border-amber-200"
+                  >
+                    {intent}
                   </Badge>
                 ))}
               </div>

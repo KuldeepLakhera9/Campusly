@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/providers/auth-provider";
 import {
   Compass,
+  Users,
   Users2,
   MessageSquare,
   Bell,
@@ -30,6 +31,7 @@ export function Navbar({ onOpenCreateHangout }: NavbarProps) {
 
   const primaryLinks = [
     { href: "/explore", label: "Explore", icon: Compass },
+    { href: "/people", label: "Find People", icon: Users },
     { href: "/hangouts", label: "Hangouts", icon: Users2 },
     { href: "/messages", label: "Messages", icon: MessageSquare },
   ];

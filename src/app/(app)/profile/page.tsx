@@ -11,6 +11,7 @@ import { Input, Textarea } from "@/components/ui/input";
 import { Tabs } from "@/components/ui/tabs";
 import { AVATAR_PRESETS, AvatarPreset, getAvatarPreset } from "@/lib/utils/avatars";
 import { CAMPUS_INTERESTS_LIST } from "@/lib/validations/auth";
+import { CAMPUS_INTENTS_LIST } from "@/types/people";
 import { MOCK_HANGOUTS, MOCK_POSTS } from "@/lib/data/mock-data";
 import { HangoutCard } from "@/components/hangouts/hangout-card";
 import { PostCard } from "@/components/feed/post-card";
@@ -23,6 +24,7 @@ import {
   Flame,
   Calendar,
   AlertCircle,
+  Compass,
 } from "lucide-react";
 
 export default function ProfilePage() {
@@ -37,6 +39,7 @@ export default function ProfilePage() {
   const [editAvatar, setEditAvatar] = React.useState<AvatarPreset>(AVATAR_PRESETS[0]);
   const [editBio, setEditBio] = React.useState("");
   const [editInterests, setEditInterests] = React.useState<string[]>([]);
+  const [editLookingFor, setEditLookingFor] = React.useState<string[]>([]);
   const [isSaving, setIsSaving] = React.useState(false);
   const [saveError, setSaveError] = React.useState<string | null>(null);
   const [saveSuccessMessage, setSaveSuccessMessage] = React.useState<string | null>(null);
@@ -106,6 +109,7 @@ export default function ProfilePage() {
       setEditAvatar(getAvatarPreset(user.publicIdentity.avatarId));
       setEditBio(user.publicIdentity.bio || "");
       setEditInterests(user.publicIdentity.interests || []);
+      setEditLookingFor(user.publicIdentity.lookingFor || []);
       setSaveError(null);
       setIsEditModalOpen(true);
     }
@@ -117,6 +121,15 @@ export default function ProfilePage() {
     } else {
       if (editInterests.length >= 8) return;
       setEditInterests((prev) => [...prev, interest]);
+    }
+  };
+
+  const toggleLookingFor = (intent: string) => {
+    if (editLookingFor.includes(intent)) {
+      setEditLookingFor((prev) => prev.filter((i) => i !== intent));
+    } else {
+      if (editLookingFor.length >= 5) return;
+      setEditLookingFor((prev) => [...prev, intent]);
     }
   };
 
@@ -140,6 +153,7 @@ export default function ProfilePage() {
           avatarColor: editAvatar.color,
           bio: editBio.trim(),
           interests: editInterests,
+          lookingFor: editLookingFor,
         }),
       });
 
@@ -295,6 +309,26 @@ export default function ProfilePage() {
           ))}
         </div>
 
+        {/* Looking for / Activity Preferences */}
+        {user?.publicIdentity?.lookingFor && user.publicIdentity.lookingFor.length > 0 && (
+          <div className="mt-3">
+            <span className="text-[10px] uppercase tracking-wider font-semibold text-campus-muted block mb-1">
+              Usually Looking For
+            </span>
+            <div className="flex flex-wrap gap-1.5">
+              {user.publicIdentity.lookingFor.map((intent) => (
+                <span
+                  key={intent}
+                  className="inline-flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-md bg-stone-100 text-stone-800 border border-stone-200 font-medium"
+                >
+                  <Compass className="w-3 h-3 text-campus-accent" />
+                  {intent}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="mt-5 pt-3 border-t border-campus-border/60 flex items-center justify-between text-xs text-campus-muted">
           <div className="flex items-center gap-1.5">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
@@ -449,6 +483,41 @@ export default function ProfilePage() {
                 />
               </button>
             </div>
+
+            {/* Setting 4: Appear in Find People */}
+            <div className="py-4 flex items-center justify-between gap-4">
+              <div>
+                <span className="block text-sm font-semibold text-campus-charcoal">
+                  Appear in Find People
+                </span>
+                <span className="block text-xs text-campus-muted mt-0.5">
+                  Allow verified peers to discover your moniker in campus interest and activity recommendations.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  handleTogglePrivacy(
+                    "appearInFindPeople",
+                    user?.privacySettings?.appearInFindPeople === false ? true : false
+                  )
+                }
+                className={`w-11 h-6 rounded-full transition-colors relative focus:outline-none ${
+                  user?.privacySettings?.appearInFindPeople !== false
+                    ? "bg-campus-accent"
+                    : "bg-stone-300"
+                }`}
+                aria-label="Toggle appear in find people"
+              >
+                <span
+                  className={`block w-4 h-4 rounded-full bg-white transition-transform ${
+                    user?.privacySettings?.appearInFindPeople !== false
+                      ? "translate-x-6"
+                      : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
           </div>
         </Card>
 
@@ -594,6 +663,32 @@ export default function ProfilePage() {
                   >
                     {isSelected && <Check className="w-3 h-3" />}
                     <span>{interest}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold tracking-wide uppercase text-campus-muted mb-1.5">
+              Activity Preferences / Looking For (Optional, up to 5)
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {CAMPUS_INTENTS_LIST.filter((i) => i !== "Anything").map((intent) => {
+                const isSelected = editLookingFor.includes(intent);
+                return (
+                  <button
+                    type="button"
+                    key={intent}
+                    onClick={() => toggleLookingFor(intent)}
+                    className={`text-xs px-2.5 py-1 rounded-md border font-medium transition-colors flex items-center gap-1 ${
+                      isSelected
+                        ? "bg-campus-accent text-white border-campus-accent"
+                        : "bg-white text-campus-body border-campus-border hover:bg-stone-50"
+                    }`}
+                  >
+                    {isSelected && <Check className="w-3 h-3" />}
+                    <span>{intent}</span>
                   </button>
                 );
               })}

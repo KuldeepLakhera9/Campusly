@@ -9,6 +9,8 @@ const UserPrivacySchema = new Schema(
     allowDirectMessages: { type: Boolean, default: true },
     revealNameOnMutualFollow: { type: Boolean, default: false },
     autoExpireHangouts: { type: Boolean, default: true },
+    appearInFindPeople: { type: Boolean, default: true },
+    showInterests: { type: Boolean, default: true },
   },
   { _id: false }
 );
@@ -36,6 +38,10 @@ const PublicIdentitySchema = new Schema(
       default: "Exploring campus without the social pressure.",
     },
     interests: {
+      type: [String],
+      default: [],
+    },
+    lookingFor: {
       type: [String],
       default: [],
     },
@@ -117,6 +123,17 @@ const UserSchema = new Schema<IUserDocument>(
   }
 );
 
+// Indexes for high-performance candidate discovery
+UserSchema.index({
+  collegeDomain: 1,
+  "privacySettings.appearInFindPeople": 1,
+  status: 1,
+});
+UserSchema.index({
+  collegeDomain: 1,
+  "publicIdentity.interests": 1,
+});
+
 // Virtuals for backward compatibility with Phase 1 components
 UserSchema.virtual("pseudonym").get(function () {
   return this.publicIdentity?.username;
@@ -133,6 +150,10 @@ UserSchema.virtual("interests").get(function () {
 UserSchema.virtual("bio").get(function () {
   return this.publicIdentity?.bio;
 });
+
+if (process.env.NODE_ENV !== "production" && mongoose.models.User) {
+  delete (mongoose.models as Record<string, unknown>).User;
+}
 
 export const User: Model<IUserDocument> =
   mongoose.models.User || mongoose.model<IUserDocument>("User", UserSchema);

@@ -90,12 +90,18 @@ export const updateProfileSchema = z.object({
     .min(3, "Please select at least 3 campus interests.")
     .max(8, "You can select up to 8 interests.")
     .optional(),
+  lookingFor: z
+    .array(z.string())
+    .max(5, "You can select up to 5 activity preferences.")
+    .optional(),
   privacySettings: z
     .object({
       hideMajor: z.boolean().optional(),
       allowDirectMessages: z.boolean().optional(),
       revealNameOnMutualFollow: z.boolean().optional(),
       autoExpireHangouts: z.boolean().optional(),
+      appearInFindPeople: z.boolean().optional(),
+      showInterests: z.boolean().optional(),
     })
     .optional(),
 });

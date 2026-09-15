@@ -57,6 +57,7 @@ export async function GET(
         avatarColor: user.publicIdentity?.avatarColor || "#C15438",
         bio: user.publicIdentity?.bio || "",
         interests: user.publicIdentity?.interests || [],
+        lookingFor: user.publicIdentity?.lookingFor || [],
         sparksCount: user.sparksCount || 0,
         collegeName: user.collegeName || "Campusly University",
         isCurrentUser: user._id.toString() === currentUser.id,

@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Compass, Users2, MessageSquare, User, Plus } from "lucide-react";
+import { Compass, Users, Users2, MessageSquare, Plus } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 export interface MobileNavProps {
@@ -18,14 +18,14 @@ export function MobileNav({ onOpenCreateHangout }: MobileNavProps) {
 
   const items = [
     { href: "/explore", label: "Explore", icon: Compass },
-    { href: "/hangouts", label: "Hangouts", icon: Users2 },
+    { href: "/people", label: "People", icon: Users },
     {
       isAction: true,
       label: "Host",
       action: onOpenCreateHangout,
     },
+    { href: "/hangouts", label: "Hangouts", icon: Users2 },
     { href: "/messages", label: "Messages", icon: MessageSquare },
-    { href: "/profile", label: "Profile", icon: User },
   ];
 
   return (

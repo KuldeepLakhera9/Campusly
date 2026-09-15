@@ -3,6 +3,8 @@ export interface UserPrivacySettings {
   allowDirectMessages: boolean;
   revealNameOnMutualFollow: boolean;
   autoExpireHangouts: boolean;
+  appearInFindPeople: boolean;
+  showInterests: boolean;
 }
 
 export interface IPublicIdentity {
@@ -11,6 +13,7 @@ export interface IPublicIdentity {
   avatarColor: string; // Accent color hex
   bio: string;
   interests: string[];
+  lookingFor?: string[]; // Optional intent / activity preferences (e.g. "Study Partner", "Coding Partner")
 }
 
 export interface IUser {

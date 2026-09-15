@@ -76,8 +76,15 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    const { username, avatarId, avatarColor, bio, interests, privacySettings } =
-      parseResult.data;
+    const {
+      username,
+      avatarId,
+      avatarColor,
+      bio,
+      interests,
+      lookingFor,
+      privacySettings,
+    } = parseResult.data;
 
     const updateFields: Record<string, unknown> = {};
 
@@ -104,6 +111,7 @@ export async function PATCH(req: NextRequest) {
     if (avatarColor) updateFields["publicIdentity.avatarColor"] = avatarColor;
     if (typeof bio === "string") updateFields["publicIdentity.bio"] = bio.trim();
     if (interests) updateFields["publicIdentity.interests"] = interests;
+    if (lookingFor) updateFields["publicIdentity.lookingFor"] = lookingFor;
     if (privacySettings) {
       if (typeof privacySettings.hideMajor === "boolean") {
         updateFields["privacySettings.hideMajor"] = privacySettings.hideMajor;
@@ -119,6 +127,14 @@ export async function PATCH(req: NextRequest) {
       if (typeof privacySettings.autoExpireHangouts === "boolean") {
         updateFields["privacySettings.autoExpireHangouts"] =
           privacySettings.autoExpireHangouts;
+      }
+      if (typeof privacySettings.appearInFindPeople === "boolean") {
+        updateFields["privacySettings.appearInFindPeople"] =
+          privacySettings.appearInFindPeople;
+      }
+      if (typeof privacySettings.showInterests === "boolean") {
+        updateFields["privacySettings.showInterests"] =
+          privacySettings.showInterests;
       }
     }
 
