@@ -29,6 +29,10 @@ export interface IHangoutDocument extends Document {
   participants: IHangoutParticipantDocument[];
   status: HangoutStatus;
   shareToFeed?: boolean;
+  isDeleted?: boolean;
+  deletedAt?: Date | null;
+  deletedBy?: mongoose.Types.ObjectId | null;
+  deletionReason?: string | null;
   createdAt: Date;
   updatedAt: Date;
 
@@ -171,6 +175,24 @@ const HangoutSchema = new Schema<IHangoutDocument>(
     shareToFeed: {
       type: Boolean,
       default: true,
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
+    deletedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    deletionReason: {
+      type: String,
+      default: "",
     },
   },
   {

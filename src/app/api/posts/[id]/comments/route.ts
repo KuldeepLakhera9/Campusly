@@ -3,6 +3,7 @@ import { connectToDatabase } from "@/lib/db/mongodb";
 import { Post, Comment, User } from "@/lib/models";
 import { getCurrentUserSafe } from "@/lib/auth/session";
 import { createCommentSchema } from "@/lib/validations/post";
+import { checkUserModerationStatus } from "@/lib/auth/admin";
 import mongoose from "mongoose";
 
 interface RouteParams {
@@ -22,7 +23,10 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     const currentUser = await getCurrentUserSafe();
     await connectToDatabase();
 
-    const commentsDoc = await Comment.find({ post: id })
+    const commentsDoc = await Comment.find({
+      post: id,
+      isDeleted: { $ne: true },
+    })
       .sort({ createdAt: 1 })
       .lean();
 
@@ -77,6 +81,11 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       );
     }
 
+    const modCheck = await checkUserModerationStatus(currentUser.id);
+    if (!modCheck.allowed) {
+      return modCheck.errorResponse!;
+    }
+
     const body = await req.json();
     const parseResult = createCommentSchema.safeParse(body);
     if (!parseResult.success) {
@@ -119,6 +128,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     });
 
     const sanitizedComment = {
+      id: commentDoc._id.toString(),
       _id: commentDoc._id.toString(),
       postId: id,
       content: commentDoc.content,

@@ -1,13 +1,19 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
-import { ReportReason, REPORT_REASONS } from "@/types/post";
+import { ReportReason } from "@/types/post";
+import { ReportPriority, ReportStatus, ReportTargetType } from "@/types/admin";
 
 export interface IReportDocument extends Document {
   reporter: mongoose.Types.ObjectId;
   target: mongoose.Types.ObjectId;
-  targetType: "post" | "comment" | "message" | "user";
-  reason: ReportReason;
+  targetType: ReportTargetType;
+  reason: ReportReason | string;
   details?: string;
-  status: "pending" | "reviewed" | "dismissed";
+  status: ReportStatus;
+  priority: ReportPriority;
+  assignedTo?: mongoose.Types.ObjectId | null;
+  resolutionReason?: string | null;
+  reviewedBy?: mongoose.Types.ObjectId | null;
+  reviewedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -28,24 +34,52 @@ const ReportSchema = new Schema<IReportDocument>(
     targetType: {
       type: String,
       required: true,
-      enum: ["post", "comment", "message", "user"],
+      enum: ["post", "comment", "message", "user", "hangout"],
       index: true,
     },
     reason: {
       type: String,
       required: true,
-      enum: REPORT_REASONS,
+      trim: true,
+      maxlength: 150,
     },
     details: {
       type: String,
-      maxlength: 500,
+      maxlength: 1000,
       trim: true,
     },
     status: {
       type: String,
-      enum: ["pending", "reviewed", "dismissed"],
+      enum: ["pending", "reviewing", "resolved", "dismissed", "reviewed"],
       default: "pending",
       index: true,
+    },
+    priority: {
+      type: String,
+      enum: ["low", "medium", "high", "critical"],
+      default: "medium",
+      index: true,
+    },
+    assignedTo: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+      index: true,
+    },
+    resolutionReason: {
+      type: String,
+      maxlength: 500,
+      trim: true,
+      default: null,
+    },
+    reviewedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    reviewedAt: {
+      type: Date,
+      default: null,
     },
   },
   {
@@ -53,9 +87,15 @@ const ReportSchema = new Schema<IReportDocument>(
   }
 );
 
-// Indexes for moderation queries and duplicate prevention
-ReportSchema.index({ status: 1, createdAt: -1 });
+// Indexes for moderation queue queries and duplicate prevention
+ReportSchema.index({ status: 1, priority: -1, createdAt: -1 });
 ReportSchema.index({ target: 1, reporter: 1 }, { unique: true });
+ReportSchema.index({ targetType: 1, target: 1 });
+ReportSchema.index({ assignedTo: 1, status: 1 });
+
+if (process.env.NODE_ENV !== "production" && mongoose.models.Report) {
+  delete (mongoose.models as Record<string, unknown>).Report;
+}
 
 export const Report: Model<IReportDocument> =
   mongoose.models.Report ||

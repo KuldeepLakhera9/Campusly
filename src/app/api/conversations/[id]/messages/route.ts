@@ -133,6 +133,15 @@ export async function POST(
       );
     }
 
+    const { checkUserModerationStatus } = await import("@/lib/auth/admin");
+    const modCheck = await checkUserModerationStatus(currentUser.id);
+    if (!modCheck.allowed) {
+      return NextResponse.json(
+        { success: false, error: modCheck.reason },
+        { status: 403 }
+      );
+    }
+
     const { id } = await params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json(

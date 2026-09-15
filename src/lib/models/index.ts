@@ -9,3 +9,4 @@ export * from "./Report";
 export * from "./Conversation";
 export * from "./Message";
 export * from "./Block";
+export * from "./AuditLog";

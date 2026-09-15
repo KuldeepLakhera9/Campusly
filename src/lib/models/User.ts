@@ -117,11 +117,43 @@ const UserSchema = new Schema<IUserDocument>(
       type: UserPrivacySchema,
       default: () => ({}),
     },
+
+    // TRUST & SAFETY / MODERATION (Phase 7)
+    moderationStatus: {
+      type: String,
+      enum: ["active", "warned", "suspended", "banned"],
+      default: "active",
+      index: true,
+    },
+    suspensionExpiresAt: {
+      type: Date,
+      default: null,
+    },
+    lastWarnedAt: {
+      type: Date,
+      default: null,
+    },
+    bannedAt: {
+      type: Date,
+      default: null,
+    },
+    bannedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    moderationNote: {
+      type: String,
+      default: "",
+    },
   },
   {
     timestamps: true,
   }
 );
+
+// Compound index for admin role and moderation status filtering
+UserSchema.index({ role: 1, moderationStatus: 1 });
 
 // Indexes for high-performance candidate discovery
 UserSchema.index({

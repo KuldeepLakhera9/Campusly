@@ -99,6 +99,7 @@ export async function getCurrentUserSafe(): Promise<ISafeUser | null> {
       id: userDoc._id.toString(),
       onboardingCompleted: Boolean(userDoc.onboardingCompleted),
       role: userDoc.role,
+      moderationStatus: userDoc.moderationStatus || "active",
       college: {
         name: userDoc.collegeName || "Accredited College",
         domain: userDoc.collegeDomain || "college.edu",

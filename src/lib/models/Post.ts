@@ -12,6 +12,10 @@ export interface IPostDocument extends Document {
   category: PostCategory;
   reactionCount: number;
   commentCount: number;
+  isDeleted?: boolean;
+  deletedAt?: Date | null;
+  deletedBy?: mongoose.Types.ObjectId | null;
+  deletionReason?: string | null;
   createdAt: Date;
   updatedAt: Date;
 
@@ -82,6 +86,24 @@ const PostSchema = new Schema<IPostDocument>(
       default: 0,
       min: 0,
     },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
+    deletedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    deletionReason: {
+      type: String,
+      default: "",
+    },
   },
   {
     timestamps: true,
@@ -94,6 +116,7 @@ const PostSchema = new Schema<IPostDocument>(
 PostSchema.index({ collegeDomain: 1, createdAt: -1 });
 PostSchema.index({ collegeDomain: 1, category: 1, createdAt: -1 });
 PostSchema.index({ author: 1, createdAt: -1 });
+PostSchema.index({ isDeleted: 1, createdAt: -1 });
 
 // Text index for search functionality
 PostSchema.index({ content: "text", category: "text" });
@@ -114,6 +137,10 @@ PostSchema.virtual("circle").get(function () {
 PostSchema.virtual("campus").get(function () {
   return this.collegeName;
 });
+
+if (process.env.NODE_ENV !== "production" && mongoose.models.Post) {
+  delete (mongoose.models as Record<string, unknown>).Post;
+}
 
 export const Post: Model<IPostDocument> =
   mongoose.models.Post || mongoose.model<IPostDocument>("Post", PostSchema);

@@ -3,6 +3,7 @@ import { connectToDatabase } from "@/lib/db/mongodb";
 import { Hangout, Post, User } from "@/lib/models";
 import { getCurrentUserSafe } from "@/lib/auth/session";
 import { createHangoutSchema, hangoutQuerySchema } from "@/lib/validations/hangout";
+import { checkUserModerationStatus } from "@/lib/auth/admin";
 import mongoose from "mongoose";
 
 export async function GET(req: NextRequest) {
@@ -32,7 +33,9 @@ export async function GET(req: NextRequest) {
     await connectToDatabase();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const filter: Record<string, any> = {};
+    const filter: Record<string, any> = {
+      isDeleted: { $ne: true },
+    };
 
     // Campus Scoping
     if (currentUser?.college?.domain) {
@@ -220,6 +223,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const modCheck = await checkUserModerationStatus(currentUser.id);
+    if (!modCheck.allowed) {
+      return modCheck.errorResponse!;
+    }
+
     const body = await req.json();
     const parseResult = createHangoutSchema.safeParse(body);
     if (!parseResult.success) {
@@ -339,6 +347,7 @@ export async function POST(req: NextRequest) {
     }
 
     const sanitizedHangout = {
+      id: hangoutDoc._id.toString(),
       _id: hangoutDoc._id.toString(),
       title: hangoutDoc.title,
       description: hangoutDoc.description,

@@ -146,6 +146,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const { checkUserModerationStatus } = await import("@/lib/auth/admin");
+    const modCheck = await checkUserModerationStatus(currentUser.id);
+    if (!modCheck.allowed) {
+      return NextResponse.json(
+        { success: false, error: modCheck.reason },
+        { status: 403 }
+      );
+    }
+
     const body = await req.json();
     const parseResult = createConversationSchema.safeParse(body);
     if (!parseResult.success) {

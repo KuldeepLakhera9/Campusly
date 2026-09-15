@@ -26,6 +26,15 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       );
     }
 
+    const { checkUserModerationStatus } = await import("@/lib/auth/admin");
+    const modCheck = await checkUserModerationStatus(currentUser.id);
+    if (!modCheck.allowed) {
+      return NextResponse.json(
+        { success: false, error: modCheck.reason },
+        { status: 403 }
+      );
+    }
+
     await connectToDatabase();
 
     const postDoc = await Post.findById(id);

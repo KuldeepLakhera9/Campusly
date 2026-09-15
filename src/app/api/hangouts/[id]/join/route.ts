@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import { Hangout, User } from "@/lib/models";
 import { getCurrentUserSafe } from "@/lib/auth/session";
+import { checkUserModerationStatus } from "@/lib/auth/admin";
 import mongoose from "mongoose";
 
 interface RouteParams {
@@ -24,6 +25,11 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         { success: false, error: "Please log in to join campus hangouts." },
         { status: 401 }
       );
+    }
+
+    const modCheck = await checkUserModerationStatus(currentUser.id);
+    if (!modCheck.allowed) {
+      return modCheck.errorResponse!;
     }
 
     await connectToDatabase();

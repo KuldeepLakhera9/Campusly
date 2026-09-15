@@ -43,6 +43,15 @@ export interface IUser {
   // METRICS & SETTINGS
   sparksCount: number;
   privacySettings: UserPrivacySettings;
+
+  // MODERATION & TRUST (Phase 7)
+  moderationStatus?: "active" | "warned" | "suspended" | "banned";
+  suspensionExpiresAt?: Date | null;
+  lastWarnedAt?: Date | null;
+  bannedAt?: Date | null;
+  bannedBy?: string | null;
+  moderationNote?: string | null;
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -60,5 +69,7 @@ export interface ISafeUser {
   publicIdentity: IPublicIdentity;
   sparksCount: number;
   privacySettings: UserPrivacySettings;
+  moderationStatus?: "active" | "warned" | "suspended" | "banned";
+  suspensionExpiresAt?: string | null;
   createdAt: string;
 }

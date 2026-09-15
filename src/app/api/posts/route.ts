@@ -3,6 +3,7 @@ import { connectToDatabase } from "@/lib/db/mongodb";
 import { Post, Reaction, User } from "@/lib/models";
 import { getCurrentUserSafe } from "@/lib/auth/session";
 import { createPostSchema, postQuerySchema } from "@/lib/validations/post";
+import { checkUserModerationStatus } from "@/lib/auth/admin";
 import { PostCategory } from "@/types/post";
 import mongoose from "mongoose";
 
@@ -29,9 +30,11 @@ export async function GET(req: NextRequest) {
 
     await connectToDatabase();
 
-    // Base query filter
+    // Base query filter (exclude soft-deleted posts from public feed)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const filter: Record<string, any> = {};
+    const filter: Record<string, any> = {
+      isDeleted: { $ne: true },
+    };
 
     if (category && category !== "All" && category !== "All Circles") {
       filter.category = category;
@@ -131,6 +134,7 @@ export async function GET(req: NextRequest) {
       const isAuthor = Boolean(currentUser && authorIdStr === currentUser.id);
 
       return {
+        id: postIdStr,
         _id: postIdStr,
         content: p.content,
         category: p.category,
@@ -183,6 +187,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const modCheck = await checkUserModerationStatus(currentUser.id);
+    if (!modCheck.allowed) {
+      return modCheck.errorResponse!;
+    }
+
     const body = await req.json();
     const parseResult = createPostSchema.safeParse(body);
     if (!parseResult.success) {
@@ -217,6 +226,7 @@ export async function POST(req: NextRequest) {
     });
 
     const sanitizedPost = {
+      id: postDoc._id.toString(),
       _id: postDoc._id.toString(),
       content: postDoc.content,
       category: postDoc.category,

@@ -12,6 +12,7 @@ import {
   Bell,
   Plus,
   LogOut,
+  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { Avatar } from "@/components/ui/avatar";
@@ -100,6 +101,23 @@ export function Navbar({ onOpenCreateHangout }: NavbarProps) {
                 <Plus className="w-3.5 h-3.5" />
                 <span>Host Hangout</span>
               </Button>
+
+              {/* Staff Moderation Console Link */}
+              {(user?.role === "moderator" || user?.role === "admin") && (
+                <Link
+                  href="/admin"
+                  className={cn(
+                    "flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-colors border",
+                    pathname.startsWith("/admin")
+                      ? "bg-amber-100 text-amber-900 border-amber-300 shadow-2xs"
+                      : "text-amber-800 bg-amber-50 hover:bg-amber-100 border-amber-200"
+                  )}
+                  title="Staff Moderation & Safety Console"
+                >
+                  <Shield className="w-3.5 h-3.5 text-amber-700" />
+                  <span className="hidden sm:inline">Admin</span>
+                </Link>
+              )}
 
               {/* Notifications */}
               <Link
