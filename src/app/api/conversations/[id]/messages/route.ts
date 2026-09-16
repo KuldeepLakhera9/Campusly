@@ -87,11 +87,36 @@ export async function GET(
           new Date(messagesToReturn[messagesToReturn.length - 1].createdAt).toISOString()
         : undefined;
 
+    // Identify other participant's last read timestamp
+    const otherParticipantMeta = conversation.participantMeta?.find(
+      (p) => p.userId.toString() !== currentUser.id
+    );
+    const otherLastReadAt = otherParticipantMeta?.lastReadAt
+      ? new Date(otherParticipantMeta.lastReadAt)
+      : null;
+
+    // Automatically mark unread messages from the other user as seen
+    const readTimestamp = new Date();
+    Message.updateMany(
+      {
+        conversationId: convId,
+        sender: { $ne: new mongoose.Types.ObjectId(currentUser.id) },
+        isSeen: false,
+      },
+      {
+        $set: { isSeen: true, seenAt: readTimestamp },
+      }
+    ).exec().catch(() => {});
+
     // Reverse to chronological order (oldest to newest)
     const chronological = [...messagesToReturn].reverse();
 
     const safeMessages = chronological.map((m) => {
       const isCurrentUser = m.sender.toString() === currentUser.id;
+      const isSeen = isCurrentUser
+        ? Boolean(m.isSeen || (otherLastReadAt && new Date(m.createdAt) <= otherLastReadAt))
+        : true;
+
       return {
         id: m._id.toString(),
         senderPseudonym: m.senderPseudonym,
@@ -102,6 +127,8 @@ export async function GET(
         createdAt: m.createdAt?.toISOString?.() || new Date(m.createdAt).toISOString(),
         timestamp: formatRelativeTime(m.createdAt),
         isDeleted: m.isDeleted || false,
+        isSeen,
+        seenAt: m.seenAt?.toISOString?.() || (isSeen && otherLastReadAt ? otherLastReadAt.toISOString() : null),
       };
     });
 
@@ -285,6 +312,8 @@ export async function POST(
           createdAt: messageDoc.createdAt.toISOString(),
           timestamp: "Just now",
           isDeleted: false,
+          isSeen: false,
+          seenAt: null,
         },
       },
       { status: 201 }

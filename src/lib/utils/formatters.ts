@@ -30,3 +30,11 @@ export function truncateText(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text;
   return text.slice(0, maxLength).trim() + "…";
 }
+
+export function getDaysRemaining(dateInput: Date | string, isCreatedAt = false): number {
+  const baseTime = new Date(dateInput).getTime();
+  const expiryTime = isCreatedAt ? baseTime + 14 * 24 * 60 * 60 * 1000 : baseTime;
+  const now = new Date().getTime();
+  const diffMs = expiryTime - now;
+  return Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+}

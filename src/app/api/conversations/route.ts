@@ -90,6 +90,20 @@ export async function GET() {
           isDeleted: false,
         });
 
+        const otherMeta = conv.participantMeta?.find(
+          (m) => m.userId.toString() === otherId
+        );
+        const isLastMessageFromMe = Boolean(
+          conv.lastMessage?.senderId &&
+          conv.lastMessage.senderId.toString() === currentUser.id
+        );
+        const lastMessageSeen = Boolean(
+          isLastMessageFromMe &&
+          otherMeta?.lastReadAt &&
+          conv.lastMessage?.createdAt &&
+          new Date(otherMeta.lastReadAt) >= new Date(conv.lastMessage.createdAt)
+        );
+
         const isBlockedByMe = otherId ? blockedByMeSet.has(otherId) : false;
         const isBlockedByOther = otherId ? blockedMeSet.has(otherId) : false;
 
@@ -117,6 +131,8 @@ export async function GET() {
           lastMessageTime: conv.lastMessage?.createdAt
             ? formatRelativeTime(conv.lastMessage.createdAt)
             : formatRelativeTime(conv.updatedAt),
+          lastMessageIsMine: isLastMessageFromMe,
+          lastMessageSeen,
           unreadCount,
           status: isBlockedByMe || isBlockedByOther ? "blocked" : conv.status || "active",
           isBlockedByMe,

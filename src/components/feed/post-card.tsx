@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatRelativeTime } from "@/lib/utils/formatters";
+import { formatRelativeTime, getDaysRemaining } from "@/lib/utils/formatters";
 import { useAuth } from "@/components/providers/auth-provider";
 import { ReportModal } from "@/components/feed/report-modal";
 import { Modal } from "@/components/ui/modal";
@@ -21,6 +21,7 @@ import {
   Send,
   CornerDownRight,
   Check,
+  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
@@ -202,6 +203,10 @@ export function PostCard({ post, onPostDeleted }: PostCardProps) {
   const authorName = post.author?.username || post.authorPseudonym || "Anonymous Student";
   const avatarId = post.author?.avatarId || "terracotta-prism";
   const avatarColor = post.author?.avatarColor || post.authorAvatarColor || "#C15438";
+  const isConfession = post.category === "Confession" || post.circle === "Campus Confessions";
+  const confessionDaysLeft = isConfession
+    ? getDaysRemaining(post.expiresAt || post.createdAt, !post.expiresAt)
+    : null;
 
   return (
     <>
@@ -240,6 +245,15 @@ export function PostCard({ post, onPostDeleted }: PostCardProps) {
           </button>
 
           <div className="flex items-center gap-2">
+            {isConfession && (
+              <span
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-900 border border-amber-200/80 shadow-2xs"
+                title="Ephemeral confession: automatically deleted 14 days after posting"
+              >
+                <Clock className="w-3 h-3 text-amber-700" />
+                <span>{confessionDaysLeft}d left (14d limit)</span>
+              </span>
+            )}
             <Badge variant="outline" size="sm">
               {post.category || post.circle || "Discussion"}
             </Badge>

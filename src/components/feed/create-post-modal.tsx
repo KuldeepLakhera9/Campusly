@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/input";
 import { Avatar } from "@/components/ui/avatar";
 import { PostCategory, POST_CATEGORIES, IPost } from "@/types/post";
 import { useAuth } from "@/components/providers/auth-provider";
-import { Sparkles, AlertCircle } from "lucide-react";
+import { Sparkles, AlertCircle, Clock } from "lucide-react";
 
 export interface CreatePostModalProps {
   isOpen: boolean;
@@ -119,6 +119,18 @@ export function CreatePostModal({
               );
             })}
           </div>
+
+          {selectedCategory === "Confession" && (
+            <div className="mt-2.5 p-3 bg-amber-50/90 border border-amber-200/80 rounded-xl text-xs text-amber-900 flex items-start gap-2.5 animate-in fade-in">
+              <Clock className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-semibold block">14-Day Auto-Deletion Policy</span>
+                <span className="text-[11px] text-amber-800 leading-relaxed">
+                  Campus Confessions are ephemeral. This post will automatically expire and be permanently removed after 14 days for student privacy.
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Content Textarea */}

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db/mongodb";
-import { Conversation } from "@/lib/models";
+import { Conversation, Message } from "@/lib/models";
 import { getCurrentUserSafe } from "@/lib/auth/session";
 import mongoose from "mongoose";
 
@@ -64,6 +64,18 @@ export async function POST(
     }
 
     await conversation.save();
+
+    // Mark all peer messages in this conversation as seen
+    await Message.updateMany(
+      {
+        conversationId: convId,
+        sender: { $ne: currentUserId },
+        isSeen: false,
+      },
+      {
+        $set: { isSeen: true, seenAt: now },
+      }
+    );
 
     return NextResponse.json({ success: true, readAt: now.toISOString() });
   } catch (err) {

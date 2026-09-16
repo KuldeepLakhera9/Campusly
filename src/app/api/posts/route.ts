@@ -30,10 +30,23 @@ export async function GET(req: NextRequest) {
 
     await connectToDatabase();
 
-    // Base query filter (exclude soft-deleted posts from public feed)
+    // Opportunistic cleanup of expired confessions older than 14 days
+    Post.deleteMany({
+      $or: [
+        { category: "Confession", createdAt: { $lt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000) } },
+        { expiresAt: { $ne: null, $lte: new Date() } },
+      ],
+    }).exec().catch(() => {});
+
+    // Base query filter (exclude soft-deleted posts and expired confessions from public feed)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const filter: Record<string, any> = {
       isDeleted: { $ne: true },
+      $or: [
+        { expiresAt: null },
+        { expiresAt: { $exists: false } },
+        { expiresAt: { $gt: new Date() } },
+      ],
     };
 
     if (category && category !== "All" && category !== "All Circles") {
@@ -42,9 +55,22 @@ export async function GET(req: NextRequest) {
 
     if (search && search.trim().length > 0) {
       const sanitized = search.trim();
-      filter.$or = [
-        { content: { $regex: sanitized, $options: "i" } },
-        { category: { $regex: sanitized, $options: "i" } },
+      const expiryClause = {
+        $or: [
+          { expiresAt: null },
+          { expiresAt: { $exists: false } },
+          { expiresAt: { $gt: new Date() } },
+        ],
+      };
+      delete filter.$or;
+      filter.$and = [
+        expiryClause,
+        {
+          $or: [
+            { content: { $regex: sanitized, $options: "i" } },
+            { category: { $regex: sanitized, $options: "i" } },
+          ],
+        },
       ];
     }
 
@@ -144,6 +170,7 @@ export async function GET(req: NextRequest) {
         commentCount: p.commentCount ?? 0,
         hasReacted: reactedPostIds.has(postIdStr),
         isAuthor,
+        expiresAt: p.expiresAt ? new Date(p.expiresAt).toISOString() : null,
         createdAt: p.createdAt ? new Date(p.createdAt).toISOString() : new Date().toISOString(),
         author: {
           id: authorIdStr,
@@ -206,6 +233,11 @@ export async function POST(req: NextRequest) {
 
     await connectToDatabase();
 
+    const isConfession = category === "Confession";
+    const expiresAt = isConfession
+      ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
+      : null;
+
     const postDoc = new Post({
       author: currentUser.id,
       authorPseudonym: currentUser.publicIdentity.username,
@@ -217,6 +249,7 @@ export async function POST(req: NextRequest) {
       category: category as PostCategory,
       reactionCount: 0,
       commentCount: 0,
+      expiresAt,
     });
     await postDoc.save();
 
@@ -236,6 +269,7 @@ export async function POST(req: NextRequest) {
       commentCount: 0,
       hasReacted: false,
       isAuthor: true,
+      expiresAt: postDoc.expiresAt ? postDoc.expiresAt.toISOString() : null,
       createdAt: postDoc.createdAt.toISOString(),
       author: {
         username: postDoc.authorPseudonym,

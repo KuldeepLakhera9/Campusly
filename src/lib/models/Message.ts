@@ -9,6 +9,8 @@ export interface IMessageDocument extends Document {
   content: string;
   isDeleted: boolean;
   deletedAt?: Date;
+  isSeen: boolean;
+  seenAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -54,15 +56,25 @@ const MessageSchema = new Schema<IMessageDocument>(
       type: Date,
       default: null,
     },
+    isSeen: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    seenAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,
   }
 );
 
-// Compound index for chronological cursor-based pagination
+// Compound index for chronological cursor-based pagination and seen-state lookups
 MessageSchema.index({ conversationId: 1, createdAt: -1 });
 MessageSchema.index({ conversationId: 1, isDeleted: 1, createdAt: -1 });
+MessageSchema.index({ conversationId: 1, sender: 1, isSeen: 1 });
 
 if (process.env.NODE_ENV !== "production" && mongoose.models.Message) {
   delete (mongoose.models as Record<string, unknown>).Message;

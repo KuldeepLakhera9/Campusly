@@ -22,9 +22,22 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     await connectToDatabase();
 
     const postDoc = await Post.findById(id).lean();
-    if (!postDoc) {
+    if (!postDoc || postDoc.isDeleted) {
       return NextResponse.json(
         { success: false, error: "Post not found." },
+        { status: 404 }
+      );
+    }
+
+    // Enforce 14-day auto-deletion policy for Confessions
+    const isExpiredConfession =
+      (postDoc.expiresAt && new Date(postDoc.expiresAt) <= new Date()) ||
+      (postDoc.category === "Confession" &&
+        new Date(postDoc.createdAt).getTime() + 14 * 24 * 60 * 60 * 1000 <= Date.now());
+
+    if (isExpiredConfession) {
+      return NextResponse.json(
+        { success: false, error: "This confession has expired and been automatically deleted." },
         { status: 404 }
       );
     }
@@ -53,6 +66,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       commentCount: postDoc.commentCount ?? 0,
       hasReacted,
       isAuthor,
+      expiresAt: postDoc.expiresAt ? new Date(postDoc.expiresAt).toISOString() : null,
       createdAt: postDoc.createdAt ? new Date(postDoc.createdAt).toISOString() : new Date().toISOString(),
       author: {
         username: postDoc.authorPseudonym,

@@ -53,6 +53,7 @@ export interface IPost {
   commentCount: number;
   hasReacted?: boolean;
   isAuthor?: boolean;
+  expiresAt?: string | Date | null;
   createdAt: string | Date;
   updatedAt?: string | Date;
 

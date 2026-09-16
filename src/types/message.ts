@@ -8,6 +8,8 @@ export interface IChatMessage {
   createdAt?: string;
   timestamp: string;
   isDeleted?: boolean;
+  isSeen?: boolean;
+  seenAt?: string | null;
 }
 
 export interface IConversationParticipant {
@@ -30,6 +32,8 @@ export interface IConversationSummary {
     isDeleted?: boolean;
   };
   lastMessageTime: string;
+  lastMessageIsMine?: boolean;
+  lastMessageSeen?: boolean;
   unreadCount: number;
   status: "active" | "blocked";
   isBlockedByMe?: boolean;

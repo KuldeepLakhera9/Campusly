@@ -10,11 +10,57 @@ export interface MobileNavProps {
   onOpenCreateHangout?: () => void;
 }
 
+function subscribeToLocation(callback: () => void) {
+  window.addEventListener("popstate", callback);
+  return () => window.removeEventListener("popstate", callback);
+}
+
+function getChatActiveSnapshot(): boolean {
+  if (typeof window === "undefined") return false;
+  return (
+    window.location.pathname.startsWith("/messages") &&
+    new URLSearchParams(window.location.search).has("c")
+  );
+}
+
+function getChatActiveServerSnapshot(): boolean {
+  return false;
+}
+
 export function MobileNav({ onOpenCreateHangout }: MobileNavProps) {
   const pathname = usePathname();
+  const [hasUnread, setHasUnread] = React.useState(false);
+
+  const isViewingChat = React.useSyncExternalStore(
+    subscribeToLocation,
+    getChatActiveSnapshot,
+    getChatActiveServerSnapshot
+  );
 
   const isAuthPage = pathname === "/login" || pathname === "/register";
-  if (isAuthPage) return null;
+
+  React.useEffect(() => {
+    let isMounted = true;
+
+    fetch("/api/conversations")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && isMounted) {
+          const unreadTotal = (data.conversations || []).reduce(
+            (acc: number, c: { unreadCount?: number }) => acc + (c.unreadCount || 0),
+            0
+          );
+          setHasUnread(unreadTotal > 0);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, [pathname]);
+
+  if (isAuthPage || isViewingChat) return null;
 
   const items = [
     { href: "/explore", label: "Explore", icon: Compass },
@@ -69,6 +115,9 @@ export function MobileNav({ onOpenCreateHangout }: MobileNavProps) {
             >
               <div className="relative">
                 <Icon className={cn("w-5 h-5", isActive ? "stroke-[2.2]" : "stroke-[1.8]")} />
+                {item.href === "/messages" && hasUnread && !isActive && (
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-campus-accent border-2 border-white shadow-2xs" />
+                )}
                 {isActive && (
                   <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-campus-accent" />
                 )}

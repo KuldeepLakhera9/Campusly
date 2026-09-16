@@ -16,6 +16,7 @@ export interface IPostDocument extends Document {
   deletedAt?: Date | null;
   deletedBy?: mongoose.Types.ObjectId | null;
   deletionReason?: string | null;
+  expiresAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 
@@ -104,6 +105,11 @@ const PostSchema = new Schema<IPostDocument>(
       type: String,
       default: "",
     },
+    expiresAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
   },
   {
     timestamps: true,
@@ -111,6 +117,17 @@ const PostSchema = new Schema<IPostDocument>(
     toObject: { virtuals: true },
   }
 );
+
+// Auto-populate expiresAt for Confessions to 14 days if not already set
+PostSchema.pre("save", function () {
+  if (this.category === "Confession" && !this.expiresAt) {
+    const baseTime = this.createdAt ? new Date(this.createdAt).getTime() : Date.now();
+    this.expiresAt = new Date(baseTime + 14 * 24 * 60 * 60 * 1000);
+  }
+});
+
+// TTL index for automatic MongoDB document deletion upon expiration
+PostSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 // Compound indexes for high performance feed retrieval
 PostSchema.index({ collegeDomain: 1, createdAt: -1 });

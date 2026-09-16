@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Modal } from "@/components/ui/modal";
 import { PublicProfileModal } from "@/components/profile/public-profile-modal";
 import { REPORT_REASONS, ReportReason } from "@/types/post";
+import { formatRelativeTime } from "@/lib/utils/formatters";
 import {
   Send,
   ShieldCheck,
@@ -22,7 +23,30 @@ import {
   User,
   Loader2,
   AlertTriangle,
+  Check,
+  CheckCheck,
+  Clock,
+  ChevronDown,
+  Copy,
+  MessageSquare,
 } from "lucide-react";
+
+function formatChatDateDivider(dateStr?: string | Date): string {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  const now = new Date();
+  const isToday = d.toDateString() === now.toDateString();
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const isYesterday = d.toDateString() === yesterday.toDateString();
+  if (isToday) return "Today";
+  if (isYesterday) return "Yesterday";
+  return d.toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
 
 export default function MessagesPage() {
   const router = useRouter();
@@ -52,11 +76,42 @@ export default function MessagesPage() {
   const [blockConfirmUser, setBlockConfirmUser] = React.useState<{ id: string; username: string; isBlocked: boolean } | null>(null);
   const [isProcessingBlock, setIsProcessingBlock] = React.useState(false);
 
-  const messagesEndRef = React.useRef<HTMLDivElement>(null);
+  // Chat container scrolling and state management
+  const chatContainerRef = React.useRef<HTMLDivElement>(null);
+  const isNearBottomRef = React.useRef(true);
+  const [showScrollBottomBtn, setShowScrollBottomBtn] = React.useState(false);
+  const [newMessagesWhileScrolled, setNewMessagesWhileScrolled] = React.useState(0);
+  const [copiedMsgId, setCopiedMsgId] = React.useState<string | null>(null);
 
-  // Scroll to bottom helper
-  const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
-    messagesEndRef.current?.scrollIntoView({ behavior });
+  // Container-isolated scroll to bottom helper (does NOT jump window/page)
+  const scrollToBottom = React.useCallback((behavior: ScrollBehavior = "smooth") => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior,
+      });
+      isNearBottomRef.current = true;
+      setShowScrollBottomBtn(false);
+      setNewMessagesWhileScrolled(0);
+    }
+  }, []);
+
+  const handleChatScroll = () => {
+    if (!chatContainerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+    const nearBottom = distanceFromBottom < 100;
+    isNearBottomRef.current = nearBottom;
+    setShowScrollBottomBtn(!nearBottom);
+    if (nearBottom) {
+      setNewMessagesWhileScrolled(0);
+    }
+  };
+
+  const handleCopyMessage = (msgId: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedMsgId(msgId);
+    setTimeout(() => setCopiedMsgId(null), 1500);
   };
 
   // 1. Fetch Conversations List callback (for polling and manual triggers)
@@ -117,9 +172,20 @@ export default function MessagesPage() {
         const res = await fetch(`/api/conversations/${activeId}/messages?limit=50`);
         if (res.ok) {
           const data = await res.json();
-          setMessages(data.messages || []);
-          if (!silent) {
-            setTimeout(() => scrollToBottom("auto"), 50);
+          const incoming: IChatMessage[] = data.messages || [];
+          setMessages((prev) => {
+            if (silent && prev.length > 0 && incoming.length > prev.length) {
+              if (!isNearBottomRef.current) {
+                setNewMessagesWhileScrolled((c) => c + (incoming.length - prev.length));
+              }
+            }
+            return incoming;
+          });
+
+          if (!silent || isNearBottomRef.current) {
+            requestAnimationFrame(() => {
+              scrollToBottom(silent ? "smooth" : "auto");
+            });
           }
         }
       } catch (err) {
@@ -128,7 +194,7 @@ export default function MessagesPage() {
         if (!silent) setIsLoadingMessages(false);
       }
     },
-    [activeId]
+    [activeId, scrollToBottom]
   );
 
   // Load messages & mark conversation as read when activeId changes
@@ -143,7 +209,7 @@ export default function MessagesPage() {
         if (res.ok && isMounted) {
           const data = await res.json();
           setMessages(data.messages || []);
-          setTimeout(() => scrollToBottom("auto"), 50);
+          requestAnimationFrame(() => scrollToBottom("auto"));
         }
       } catch (err) {
         console.error("Failed to load messages:", err);
@@ -168,7 +234,7 @@ export default function MessagesPage() {
     return () => {
       isMounted = false;
     };
-  }, [activeId]);
+  }, [activeId, scrollToBottom]);
 
   // 3. Smart Polling Engine (6-second interval, only while tab is visible and conversation is open)
   React.useEffect(() => {
@@ -232,11 +298,12 @@ export default function MessagesPage() {
       content,
       createdAt: new Date().toISOString(),
       timestamp: "Just now",
+      isSeen: false,
     };
 
     setMessages((prev) => [...prev, optimisticMsg]);
     setInputMessage("");
-    setTimeout(() => scrollToBottom("smooth"), 50);
+    requestAnimationFrame(() => scrollToBottom("smooth"));
 
     try {
       const res = await fetch(`/api/conversations/${activeId}/messages`, {
@@ -267,6 +334,8 @@ export default function MessagesPage() {
                   createdAt: data.message.createdAt,
                 },
                 lastMessageTime: "Just now",
+                lastMessageIsMine: true,
+                lastMessageSeen: false,
               }
             : c
         )
@@ -380,9 +449,13 @@ export default function MessagesPage() {
     activeConversation?.isBlockedByMe || activeConversation?.isBlockedByOther;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 md:py-8">
+    <div className="max-w-6xl mx-auto px-0 sm:px-6 py-0 sm:py-6 md:py-8 h-[calc(100dvh-4rem)] md:h-auto flex flex-col">
       {/* Page Heading */}
-      <div className="pb-4 border-b border-campus-border/70 mb-6 flex items-center justify-between">
+      <div
+        className={`pb-3 sm:pb-4 border-b border-campus-border/70 mb-2 sm:mb-6 flex items-center justify-between px-4 sm:px-0 ${
+          mobileShowChat ? "hidden md:flex" : "flex"
+        }`}
+      >
         <div>
           <h1 className="font-serif text-2xl sm:text-3xl font-medium text-campus-charcoal">
             Pseudonymous Conversations
@@ -394,10 +467,10 @@ export default function MessagesPage() {
       </div>
 
       {/* Main Messenger Box */}
-      <Card className="h-[700px] grid grid-cols-1 md:grid-cols-12 overflow-hidden shadow-xs border-campus-border/80">
+      <Card className="flex-1 md:h-[750px] grid grid-cols-1 md:grid-cols-12 overflow-hidden shadow-xs border-0 sm:border border-campus-border/80 rounded-none sm:rounded-2xl min-h-0 bg-white">
         {/* Left Column: Conversation List */}
         <div
-          className={`md:col-span-4 lg:col-span-5 border-r border-campus-border flex flex-col h-full bg-campus-bg/40 ${
+          className={`md:col-span-4 lg:col-span-5 border-r border-campus-border flex flex-col h-full bg-campus-bg/40 min-h-0 ${
             mobileShowChat ? "hidden md:flex" : "flex"
           }`}
         >
@@ -462,13 +535,22 @@ export default function MessagesPage() {
                       </div>
 
                       <p
-                        className={`text-xs truncate mt-1 ${
+                        className={`text-xs truncate mt-1 flex items-center gap-1.5 ${
                           c.unreadCount > 0
                             ? "font-semibold text-campus-charcoal"
                             : "text-campus-muted"
                         } ${c.lastMessage?.isDeleted ? "italic opacity-80" : ""}`}
                       >
-                        {c.lastMessage ? c.lastMessage.content : "Started a new conversation."}
+                        {c.lastMessageIsMine && (
+                          c.lastMessageSeen ? (
+                            <CheckCheck className="w-3.5 h-3.5 text-sky-600 shrink-0 stroke-[2.2]" />
+                          ) : (
+                            <Check className="w-3.5 h-3.5 text-campus-subtle shrink-0" />
+                          )
+                        )}
+                        <span className="truncate">
+                          {c.lastMessage ? c.lastMessage.content : "Started a new conversation."}
+                        </span>
                       </p>
 
                       <div className="mt-2 flex items-center justify-between">
@@ -505,25 +587,26 @@ export default function MessagesPage() {
 
         {/* Right Column: Chat Window */}
         <div
-          className={`md:col-span-8 lg:col-span-7 flex flex-col h-full bg-white ${
+          className={`md:col-span-8 lg:col-span-7 flex flex-col h-full bg-white min-h-0 ${
             !mobileShowChat ? "hidden md:flex" : "flex"
           }`}
         >
           {activeConversation ? (
             <>
               {/* Chat Header */}
-              <div className="p-3.5 sm:px-6 border-b border-campus-border flex items-center justify-between bg-white z-10">
+              <div className="p-3 sm:px-6 border-b border-campus-border flex items-center justify-between bg-white z-10 shrink-0">
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => setMobileShowChat(false)}
-                    className="md:hidden p-1 text-campus-muted hover:text-campus-charcoal rounded-md"
+                    className="md:hidden p-1.5 -ml-1 text-campus-muted hover:text-campus-charcoal rounded-md active:bg-stone-100"
+                    aria-label="Back to conversations"
                   >
-                    <ArrowLeft className="w-4 h-4" />
+                    <ArrowLeft className="w-5 h-5" />
                   </button>
 
                   <button
                     onClick={() => setViewProfileUserId(activeConversation.otherUser.userId)}
-                    className="flex items-center gap-3 text-left group"
+                    className="flex items-center gap-3 text-left group cursor-pointer"
                   >
                     <Avatar
                       moniker={activeConversation.otherUser.username}
@@ -532,10 +615,11 @@ export default function MessagesPage() {
                       size="sm"
                     />
                     <div>
-                      <h3 className="text-xs sm:text-sm font-bold text-campus-charcoal leading-tight group-hover:text-campus-accent transition-colors">
-                        {activeConversation.otherUser.username}
+                      <h3 className="text-xs sm:text-sm font-bold text-campus-charcoal leading-tight group-hover:text-campus-accent transition-colors flex items-center gap-1.5">
+                        <span>{activeConversation.otherUser.username}</span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                       </h3>
-                      <p className="text-[10px] text-campus-muted truncate max-w-[180px] sm:max-w-xs mt-0.5">
+                      <p className="text-[10px] text-campus-muted truncate max-w-[170px] sm:max-w-xs mt-0.5">
                         {activeConversation.otherUser.interests && activeConversation.otherUser.interests.length > 0
                           ? activeConversation.otherUser.interests.slice(0, 3).join(" · ")
                           : activeConversation.otherUser.collegeName}
@@ -579,7 +663,7 @@ export default function MessagesPage() {
               </div>
 
               {/* Privacy Banner */}
-              <div className="px-4 py-2 bg-stone-50 border-b border-stone-200/70 flex items-center justify-between gap-2 text-[11px] text-campus-muted">
+              <div className="px-4 py-2 bg-stone-50 border-b border-stone-200/70 flex items-center justify-between gap-2 text-[11px] text-campus-muted shrink-0">
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="w-3.5 h-3.5 text-campus-accent shrink-0" />
                   <span>
@@ -589,74 +673,184 @@ export default function MessagesPage() {
               </div>
 
               {/* Messages Area */}
-              <div className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-3.5 bg-campus-bg/25">
+              <div
+                ref={chatContainerRef}
+                onScroll={handleChatScroll}
+                className="flex-1 min-h-0 p-3.5 sm:p-6 overflow-y-auto overscroll-contain space-y-3 bg-campus-bg/25 relative"
+              >
                 {isLoadingMessages ? (
                   <div className="py-12 flex flex-col items-center justify-center text-center">
                     <Loader2 className="w-6 h-6 text-campus-accent animate-spin mb-2" />
                     <span className="text-xs text-campus-muted">Loading messages...</span>
                   </div>
                 ) : messages.length > 0 ? (
-                  messages.map((msg) => (
-                    <div
-                      key={msg.id}
-                      className={`flex flex-col group ${
-                        msg.isCurrentUser ? "items-end" : "items-start"
-                      }`}
-                    >
-                      <div className="flex items-center gap-1.5 max-w-[85%] sm:max-w-[75%]">
-                        {/* Action trigger for current user (Delete) */}
-                        {msg.isCurrentUser && !msg.isDeleted && (
-                          <button
-                            onClick={() => handleDeleteMessage(msg.id)}
-                            className="opacity-0 group-hover:opacity-100 p-1 text-campus-subtle hover:text-red-600 transition-opacity"
-                            title="Delete message"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                  messages.map((msg, idx) => {
+                    const prevMsg = idx > 0 ? messages[idx - 1] : null;
+                    const showDivider =
+                      !prevMsg ||
+                      formatChatDateDivider(msg.createdAt) !== formatChatDateDivider(prevMsg.createdAt);
+
+                    return (
+                      <React.Fragment key={msg.id}>
+                        {showDivider && (
+                          <div className="flex justify-center my-3 select-none">
+                            <span className="text-[10px] sm:text-[11px] font-medium text-campus-muted bg-white/90 border border-campus-border/70 px-3 py-0.5 rounded-full shadow-2xs">
+                              {formatChatDateDivider(msg.createdAt)}
+                            </span>
+                          </div>
                         )}
 
                         <div
-                          className={`rounded-xl px-4 py-2.5 text-xs sm:text-sm leading-relaxed shadow-2xs ${
-                            msg.isDeleted
-                              ? "bg-stone-100 border border-stone-200 text-stone-500 italic"
-                              : msg.isCurrentUser
-                              ? "bg-campus-charcoal text-white rounded-br-xs"
-                              : "bg-white border border-campus-border text-campus-charcoal rounded-bl-xs"
+                          className={`flex flex-col group ${
+                            msg.isCurrentUser ? "items-end" : "items-start"
                           }`}
                         >
-                          {msg.content}
+                          <div className="flex items-center gap-1.5 max-w-[85%] sm:max-w-[75%]">
+                            {/* Copy button for current user message */}
+                            {msg.isCurrentUser && !msg.isDeleted && (
+                              <button
+                                onClick={() => handleCopyMessage(msg.id, msg.content)}
+                                className="opacity-0 group-hover:opacity-100 p-1 text-campus-subtle hover:text-campus-charcoal transition-opacity cursor-pointer"
+                                title={copiedMsgId === msg.id ? "Copied!" : "Copy message"}
+                              >
+                                {copiedMsgId === msg.id ? (
+                                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                ) : (
+                                  <Copy className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            )}
+
+                            {/* Action trigger for current user (Delete) */}
+                            {msg.isCurrentUser && !msg.isDeleted && (
+                              <button
+                                onClick={() => handleDeleteMessage(msg.id)}
+                                className="opacity-0 group-hover:opacity-100 p-1 text-campus-subtle hover:text-red-600 transition-opacity cursor-pointer"
+                                title="Delete message"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+
+                            <div
+                              className={`rounded-2xl px-4 py-2.5 text-xs sm:text-sm leading-relaxed shadow-2xs ${
+                                msg.isDeleted
+                                  ? "bg-stone-100 border border-stone-200 text-stone-500 italic"
+                                  : msg.isCurrentUser
+                                  ? "bg-campus-charcoal text-white rounded-br-xs"
+                                  : "bg-white border border-campus-border text-campus-charcoal rounded-bl-xs"
+                              }`}
+                            >
+                              {msg.content}
+                            </div>
+
+                            {/* Copy button for peer message */}
+                            {!msg.isCurrentUser && !msg.isDeleted && (
+                              <button
+                                onClick={() => handleCopyMessage(msg.id, msg.content)}
+                                className="opacity-0 group-hover:opacity-100 p-1 text-campus-subtle hover:text-campus-charcoal transition-opacity cursor-pointer"
+                                title={copiedMsgId === msg.id ? "Copied!" : "Copy message"}
+                              >
+                                {copiedMsgId === msg.id ? (
+                                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                ) : (
+                                  <Copy className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            )}
+
+                            {/* Action trigger for peer message (Report) */}
+                            {!msg.isCurrentUser && !msg.isDeleted && (
+                              <button
+                                onClick={() =>
+                                  setReportTarget({ type: "message", id: msg.id })
+                                }
+                                className="opacity-0 group-hover:opacity-100 p-1 text-campus-subtle hover:text-amber-600 transition-opacity cursor-pointer"
+                                title="Report message"
+                              >
+                                <Flag className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Message metadata & delivery/seen status */}
+                          <div className="flex items-center gap-1.5 text-[10px] text-campus-subtle mt-1 px-1 select-none">
+                            <span>{msg.timestamp}</span>
+                            {msg.isCurrentUser && !msg.isDeleted && (
+                              <>
+                                {msg.id.startsWith("temp-") ? (
+                                  <span className="flex items-center gap-0.5 text-stone-400" title="Sending...">
+                                    <Clock className="w-3 h-3 animate-pulse" />
+                                    <span className="text-[9px]">Sending</span>
+                                  </span>
+                                ) : msg.isSeen ? (
+                                  <span
+                                    className="flex items-center gap-1 text-sky-600 font-semibold"
+                                    title={msg.seenAt ? `Seen ${formatRelativeTime(msg.seenAt)}` : "Seen by student"}
+                                  >
+                                    <CheckCheck className="w-3.5 h-3.5 stroke-[2.4]" />
+                                    <span className="text-[9px] uppercase tracking-wider font-bold">Seen</span>
+                                  </span>
+                                ) : (
+                                  <span className="flex items-center gap-0.5 text-stone-400" title="Delivered">
+                                    <Check className="w-3.5 h-3.5" />
+                                    <span className="text-[9px]">Sent</span>
+                                  </span>
+                                )}
+                              </>
+                            )}
+                          </div>
                         </div>
-
-                        {/* Action trigger for peer message (Report) */}
-                        {!msg.isCurrentUser && !msg.isDeleted && (
-                          <button
-                            onClick={() =>
-                              setReportTarget({ type: "message", id: msg.id })
-                            }
-                            className="opacity-0 group-hover:opacity-100 p-1 text-campus-subtle hover:text-amber-600 transition-opacity"
-                            title="Report message"
-                          >
-                            <Flag className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
-
-                      <span className="text-[10px] text-campus-subtle mt-1 px-1">
-                        {msg.timestamp}
-                      </span>
-                    </div>
-                  ))
+                      </React.Fragment>
+                    );
+                  })
                 ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-center p-6">
-                    <p className="font-serif text-sm font-semibold text-campus-charcoal mb-1">
-                      Start the conversation.
+                  <div className="h-full flex flex-col items-center justify-center text-center p-6 my-auto">
+                    <div className="w-12 h-12 rounded-2xl bg-campus-accent/10 text-campus-accent flex items-center justify-center mb-3 shadow-2xs">
+                      <MessageSquare className="w-6 h-6" />
+                    </div>
+                    <p className="font-serif text-base font-semibold text-campus-charcoal mb-1">
+                      Start your private conversation
                     </p>
-                    <p className="text-xs text-campus-muted max-w-xs leading-relaxed">
-                      Say something natural. Ask about classes, hangouts, or shared campus interests.
+                    <p className="text-xs text-campus-muted max-w-xs leading-relaxed mb-4">
+                      Direct, pseudonymous messaging. Ask about classes, study sessions, or shared interests.
                     </p>
+                    <div className="flex flex-wrap gap-2 justify-center max-w-sm">
+                      {[
+                        "👋 Hey! What's your major?",
+                        "📚 Free for a study session this week?",
+                        "☕ Any good coffee spot recommendations nearby?",
+                      ].map((promptText) => (
+                        <button
+                          key={promptText}
+                          type="button"
+                          onClick={() => setInputMessage(promptText)}
+                          className="text-[11px] px-3 py-1.5 rounded-full bg-white border border-campus-border hover:border-campus-accent hover:text-campus-accent transition-all text-campus-body text-left shadow-2xs cursor-pointer active:scale-95"
+                        >
+                          {promptText}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
-                <div ref={messagesEndRef} />
+
+                {/* Floating jump to latest messages button */}
+                {showScrollBottomBtn && (
+                  <button
+                    type="button"
+                    onClick={() => scrollToBottom("smooth")}
+                    className="sticky bottom-2 ml-auto z-20 bg-white/95 text-campus-charcoal hover:bg-white border border-campus-border shadow-md rounded-full px-3 py-1.5 flex items-center gap-1.5 transition-all animate-in fade-in zoom-in-95 cursor-pointer active:scale-95"
+                    title="Jump to latest messages"
+                  >
+                    <ChevronDown className="w-4 h-4 text-campus-accent" />
+                    <span className="text-xs font-semibold">Latest</span>
+                    {newMessagesWhileScrolled > 0 && (
+                      <span className="text-[10px] font-bold bg-campus-accent text-white px-1.5 py-0.5 rounded-full">
+                        {newMessagesWhileScrolled}
+                      </span>
+                    )}
+                  </button>
+                )}
               </div>
 
               {/* Blocked or Active Input Bar */}
@@ -671,7 +865,7 @@ export default function MessagesPage() {
               ) : (
                 <form
                   onSubmit={handleSendMessage}
-                  className="p-3 sm:p-4 border-t border-campus-border bg-white"
+                  className="p-2.5 sm:p-4 border-t border-campus-border bg-white shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
                 >
                   {sendError && (
                     <div className="mb-2 text-xs text-red-600 flex items-center gap-1.5">

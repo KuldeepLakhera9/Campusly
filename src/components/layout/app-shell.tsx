@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { usePathname } from "next/navigation";
 import { Navbar } from "./navbar";
 import { MobileNav } from "./mobile-nav";
 import { Footer } from "./footer";
@@ -12,6 +13,8 @@ export interface AppShellProps {
 }
 
 export function AppShell({ children, showFooter = true }: AppShellProps) {
+  const pathname = usePathname();
+  const isMessagesPage = pathname?.startsWith("/messages");
   const [isHangoutModalOpen, setIsHangoutModalOpen] = React.useState(false);
 
   return (
@@ -19,11 +22,11 @@ export function AppShell({ children, showFooter = true }: AppShellProps) {
       <Navbar onOpenCreateHangout={() => setIsHangoutModalOpen(true)} />
       
       {/* Main page content area with mobile bottom padding for dock */}
-      <main className="flex-1 pb-20 md:pb-10">
+      <main className={`flex-1 ${isMessagesPage ? "pb-0 md:pb-6" : "pb-20 md:pb-10"}`}>
         {children}
       </main>
 
-      {showFooter && <Footer />}
+      {showFooter && !isMessagesPage && <Footer />}
 
       <MobileNav onOpenCreateHangout={() => setIsHangoutModalOpen(true)} />
 
