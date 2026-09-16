@@ -12,6 +12,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useAuth } from "@/components/providers/auth-provider";
+import { PostCardSkeleton } from "@/components/ui/skeleton-loader";
 import {
   Search,
   Plus,
@@ -407,19 +408,9 @@ export default function ExplorePage() {
           {/* Posts Feed */}
           {isLoading ? (
             <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <Card key={i} className="p-5 bg-white animate-pulse space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-md bg-stone-200" />
-                    <div className="space-y-1.5 flex-1">
-                      <div className="w-24 h-3 bg-stone-200 rounded" />
-                      <div className="w-16 h-2 bg-stone-100 rounded" />
-                    </div>
-                  </div>
-                  <div className="w-full h-12 bg-stone-100 rounded" />
-                  <div className="w-20 h-4 bg-stone-100 rounded" />
-                </Card>
-              ))}
+              <PostCardSkeleton />
+              <PostCardSkeleton />
+              <PostCardSkeleton />
             </div>
           ) : posts.length > 0 ? (
             <div className="space-y-4">

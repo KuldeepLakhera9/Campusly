@@ -117,6 +117,23 @@ export async function GET(
         ? Boolean(m.isSeen || (otherLastReadAt && new Date(m.createdAt) <= otherLastReadAt))
         : true;
 
+      // Format reactions
+      const groupedMap = new Map<string, { count: number; userReacted: boolean }>();
+      (m.reactions || []).forEach((r: { user: { toString: () => string }; emoji: string }) => {
+        const isUser = r.user.toString() === currentUser.id;
+        const current = groupedMap.get(r.emoji) || { count: 0, userReacted: false };
+        groupedMap.set(r.emoji, {
+          count: current.count + 1,
+          userReacted: current.userReacted || isUser,
+        });
+      });
+
+      const reactions = Array.from(groupedMap.entries()).map(([em, val]) => ({
+        emoji: em,
+        count: val.count,
+        userReacted: val.userReacted,
+      }));
+
       return {
         id: m._id.toString(),
         senderPseudonym: m.senderPseudonym,
@@ -129,6 +146,7 @@ export async function GET(
         isDeleted: m.isDeleted || false,
         isSeen,
         seenAt: m.seenAt?.toISOString?.() || (isSeen && otherLastReadAt ? otherLastReadAt.toISOString() : null),
+        reactions,
       };
     });
 

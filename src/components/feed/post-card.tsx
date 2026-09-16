@@ -21,7 +21,7 @@ import {
   Send,
   CornerDownRight,
   Check,
-  Clock,
+  Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
@@ -212,8 +212,17 @@ export function PostCard({ post, onPostDeleted }: PostCardProps) {
     <>
       <Card
         id={`post-${post._id}`}
-        className="p-5 hover:border-campus-border-strong transition-all bg-white"
+        className={cn(
+          "p-5 transition-all relative overflow-hidden",
+          isConfession
+            ? "bg-stone-900 text-stone-100 border-amber-500/30 shadow-md hover:border-amber-500/50"
+            : "bg-white hover:border-campus-border-strong text-campus-charcoal"
+        )}
       >
+        {isConfession && (
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500" />
+        )}
+
         {/* Author Bar */}
         <div className="flex items-center justify-between gap-3 mb-3">
           <button
@@ -230,15 +239,32 @@ export function PostCard({ post, onPostDeleted }: PostCardProps) {
             />
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-campus-charcoal group-hover:text-campus-accent transition-colors">
+                <span
+                  className={cn(
+                    "text-xs font-bold transition-colors",
+                    isConfession
+                      ? "text-stone-100 group-hover:text-amber-400"
+                      : "text-campus-charcoal group-hover:text-campus-accent"
+                  )}
+                >
                   {authorName}
                 </span>
-                <span className="text-[11px] text-campus-subtle">•</span>
-                <span className="text-[11px] text-campus-muted">
+                <span className={cn("text-[11px]", isConfession ? "text-stone-500" : "text-campus-subtle")}>•</span>
+                <span
+                  className={cn(
+                    "text-[11px]",
+                    isConfession ? "text-stone-400" : "text-campus-muted"
+                  )}
+                >
                   {formatRelativeTime(post.createdAt)}
                 </span>
               </div>
-              <div className="text-[10px] text-campus-subtle">
+              <div
+                className={cn(
+                  "text-[10px]",
+                  isConfession ? "text-amber-400/80 font-medium" : "text-campus-subtle"
+                )}
+              >
                 {post.collegeName || post.campus || "Accredited Campus"}
               </div>
             </div>
@@ -247,14 +273,20 @@ export function PostCard({ post, onPostDeleted }: PostCardProps) {
           <div className="flex items-center gap-2">
             {isConfession && (
               <span
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-900 border border-amber-200/80 shadow-2xs"
+                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-amber-950/80 text-amber-300 border border-amber-600/40 shadow-xs tracking-tight"
                 title="Ephemeral confession: automatically deleted 14 days after posting"
               >
-                <Clock className="w-3 h-3 text-amber-700" />
+                <Lock className="w-3 h-3 text-amber-400 animate-pulse" />
                 <span>{confessionDaysLeft}d left (14d limit)</span>
               </span>
             )}
-            <Badge variant="outline" size="sm">
+            <Badge
+              variant={isConfession ? "outline" : "outline"}
+              size="sm"
+              className={cn(
+                isConfession && "border-amber-700/50 bg-amber-950/40 text-amber-300"
+              )}
+            >
               {post.category || post.circle || "Discussion"}
             </Badge>
 
@@ -262,7 +294,12 @@ export function PostCard({ post, onPostDeleted }: PostCardProps) {
             <div className="relative">
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="p-1 text-campus-subtle hover:text-campus-charcoal hover:bg-stone-100 rounded-md transition-colors"
+                className={cn(
+                  "p-1 rounded-md transition-colors",
+                  isConfession
+                    ? "text-stone-400 hover:text-stone-100 hover:bg-stone-800"
+                    : "text-campus-subtle hover:text-campus-charcoal hover:bg-stone-100"
+                )}
                 aria-label="Post actions"
               >
                 <MoreHorizontal className="w-4 h-4" />
@@ -320,12 +357,22 @@ export function PostCard({ post, onPostDeleted }: PostCardProps) {
         </div>
 
         {/* Post Body */}
-        <div className="text-xs sm:text-sm text-campus-charcoal leading-relaxed whitespace-pre-line py-1">
+        <div
+          className={cn(
+            "text-xs sm:text-sm leading-relaxed whitespace-pre-line py-1",
+            isConfession ? "text-stone-200" : "text-campus-charcoal"
+          )}
+        >
           {post.content}
         </div>
 
         {/* Interaction Footer */}
-        <div className="mt-4 pt-3 border-t border-campus-border/60 flex items-center justify-between">
+        <div
+          className={cn(
+            "mt-4 pt-3 border-t flex items-center justify-between",
+            isConfession ? "border-stone-800" : "border-campus-border/60"
+          )}
+        >
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Reaction Button (Heart) */}
             <button
@@ -334,8 +381,12 @@ export function PostCard({ post, onPostDeleted }: PostCardProps) {
               className={cn(
                 "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all active:scale-95",
                 hasReacted
-                  ? "bg-rose-50 text-rose-600 font-semibold"
-                  : "text-campus-muted hover:text-campus-charcoal hover:bg-stone-100"
+                  ? isConfession
+                    ? "bg-rose-950/80 text-rose-300 font-semibold border border-rose-900/60"
+                    : "bg-rose-50 text-rose-600 font-semibold"
+                  : isConfession
+                    ? "text-stone-400 hover:text-stone-200 hover:bg-stone-800"
+                    : "text-campus-muted hover:text-campus-charcoal hover:bg-stone-100"
               )}
               aria-label={hasReacted ? "Unlike post" : "Like post"}
             >
@@ -354,8 +405,12 @@ export function PostCard({ post, onPostDeleted }: PostCardProps) {
               className={cn(
                 "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
                 isCommentsOpen
-                  ? "bg-stone-100 text-campus-charcoal"
-                  : "text-campus-muted hover:text-campus-charcoal hover:bg-stone-100"
+                  ? isConfession
+                    ? "bg-stone-800 text-stone-100"
+                    : "bg-stone-100 text-campus-charcoal"
+                  : isConfession
+                    ? "text-stone-400 hover:text-stone-200 hover:bg-stone-800"
+                    : "text-campus-muted hover:text-campus-charcoal hover:bg-stone-100"
               )}
               aria-label="Toggle comments"
             >
@@ -367,7 +422,12 @@ export function PostCard({ post, onPostDeleted }: PostCardProps) {
           {/* Share Button */}
           <button
             onClick={handleShare}
-            className="p-1.5 text-campus-subtle hover:text-campus-charcoal hover:bg-stone-100 rounded-md transition-colors flex items-center gap-1 text-xs"
+            className={cn(
+              "p-1.5 rounded-md transition-colors flex items-center gap-1 text-xs",
+              isConfession
+                ? "text-stone-400 hover:text-stone-200 hover:bg-stone-800"
+                : "text-campus-subtle hover:text-campus-charcoal hover:bg-stone-100"
+            )}
             aria-label="Share post"
           >
             {isCopied ? (
@@ -383,10 +443,20 @@ export function PostCard({ post, onPostDeleted }: PostCardProps) {
 
         {/* Single-Level Comments Section */}
         {isCommentsOpen && (
-          <div className="mt-4 pt-4 border-t border-dashed border-campus-border/70 space-y-4">
+          <div
+            className={cn(
+              "mt-4 pt-4 border-t border-dashed space-y-4",
+              isConfession ? "border-stone-800" : "border-campus-border/70"
+            )}
+          >
             {/* Comments List */}
             {isLoadingComments ? (
-              <div className="text-center py-4 text-xs text-campus-muted">
+              <div
+                className={cn(
+                  "text-center py-4 text-xs",
+                  isConfession ? "text-stone-400" : "text-campus-muted"
+                )}
+              >
                 Loading campus comments...
               </div>
             ) : comments.length > 0 ? (
@@ -405,7 +475,12 @@ export function PostCard({ post, onPostDeleted }: PostCardProps) {
                   return (
                     <div
                       key={comment._id}
-                      className="flex items-start justify-between gap-2.5 p-3 rounded-lg bg-campus-bg/60 border border-campus-border/50 text-xs"
+                      className={cn(
+                        "flex items-start justify-between gap-2.5 p-3 rounded-lg border text-xs",
+                        isConfession
+                          ? "bg-stone-800/80 border-stone-700/60 text-stone-200"
+                          : "bg-campus-bg/60 border-campus-border/50 text-campus-charcoal"
+                      )}
                     >
                       <div className="flex items-start gap-2.5 min-w-0">
                         <Avatar
@@ -416,14 +491,29 @@ export function PostCard({ post, onPostDeleted }: PostCardProps) {
                         />
                         <div className="space-y-1 min-w-0">
                           <div className="flex items-center gap-1.5">
-                            <span className="font-semibold text-campus-charcoal">
+                            <span
+                              className={cn(
+                                "font-semibold",
+                                isConfession ? "text-stone-100" : "text-campus-charcoal"
+                              )}
+                            >
                               {commentAuthor}
                             </span>
-                            <span className="text-[10px] text-campus-muted">
+                            <span
+                              className={cn(
+                                "text-[10px]",
+                                isConfession ? "text-stone-400" : "text-campus-muted"
+                              )}
+                            >
                               • {formatRelativeTime(comment.createdAt)}
                             </span>
                           </div>
-                          <div className="text-campus-charcoal whitespace-pre-line leading-relaxed">
+                          <div
+                            className={cn(
+                              "whitespace-pre-line leading-relaxed",
+                              isConfession ? "text-stone-200" : "text-campus-charcoal"
+                            )}
+                          >
                             {comment.content}
                           </div>
                         </div>
@@ -434,7 +524,12 @@ export function PostCard({ post, onPostDeleted }: PostCardProps) {
                         {isCommentAuthor ? (
                           <button
                             onClick={() => handleDeleteComment(comment._id)}
-                            className="p-1 text-campus-subtle hover:text-red-600 rounded transition-colors"
+                            className={cn(
+                              "p-1 rounded transition-colors",
+                              isConfession
+                                ? "text-stone-400 hover:text-red-400"
+                                : "text-campus-subtle hover:text-red-600"
+                            )}
                             title="Delete comment"
                             aria-label="Delete comment"
                           >
@@ -449,7 +544,12 @@ export function PostCard({ post, onPostDeleted }: PostCardProps) {
                                 author: commentAuthor,
                               })
                             }
-                            className="p-1 text-campus-subtle hover:text-campus-accent rounded transition-colors"
+                            className={cn(
+                              "p-1 rounded transition-colors",
+                              isConfession
+                                ? "text-stone-400 hover:text-amber-400"
+                                : "text-campus-subtle hover:text-campus-accent"
+                            )}
                             title="Report comment"
                             aria-label="Report comment"
                           >
@@ -462,14 +562,24 @@ export function PostCard({ post, onPostDeleted }: PostCardProps) {
                 })}
               </div>
             ) : (
-              <div className="text-center py-2 text-xs text-campus-muted">
+              <div
+                className={cn(
+                  "text-center py-2 text-xs",
+                  isConfession ? "text-stone-400" : "text-campus-muted"
+                )}
+              >
                 No comments yet. Start the conversation below.
               </div>
             )}
 
             {/* Inline Comment Composer */}
             <form onSubmit={handleAddComment} className="flex items-center gap-2">
-              <CornerDownRight className="w-4 h-4 text-campus-muted shrink-0 ml-1" />
+              <CornerDownRight
+                className={cn(
+                  "w-4 h-4 shrink-0 ml-1",
+                  isConfession ? "text-stone-400" : "text-campus-muted"
+                )}
+              />
               <input
                 type="text"
                 placeholder={
@@ -480,7 +590,12 @@ export function PostCard({ post, onPostDeleted }: PostCardProps) {
                 value={newCommentText}
                 onChange={(e) => setNewCommentText(e.target.value)}
                 maxLength={1000}
-                className="flex-1 text-xs bg-stone-50 border border-campus-border rounded-md px-3 py-2 outline-none text-campus-charcoal placeholder:text-campus-subtle focus:border-campus-charcoal focus:bg-white transition-all"
+                className={cn(
+                  "flex-1 text-xs rounded-md px-3 py-2 outline-none border transition-all",
+                  isConfession
+                    ? "bg-stone-800 border-stone-700 text-stone-100 placeholder:text-stone-500 focus:border-amber-500/80"
+                    : "bg-stone-50 border-campus-border text-campus-charcoal placeholder:text-campus-subtle focus:border-campus-charcoal focus:bg-white"
+                )}
               />
               <Button
                 type="submit"
@@ -488,7 +603,10 @@ export function PostCard({ post, onPostDeleted }: PostCardProps) {
                 variant="primary"
                 disabled={!newCommentText.trim() || isSubmittingComment}
                 isLoading={isSubmittingComment}
-                className="shrink-0 text-xs px-3"
+                className={cn(
+                  "shrink-0 text-xs px-3",
+                  isConfession && "bg-amber-600 hover:bg-amber-500 text-stone-950 font-bold"
+                )}
               >
                 <Send className="w-3 h-3" />
                 <span className="hidden sm:inline">Reply</span>

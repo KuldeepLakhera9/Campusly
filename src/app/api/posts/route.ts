@@ -49,6 +49,11 @@ export async function GET(req: NextRequest) {
       ],
     };
 
+    const authorParam = searchParams.get("author");
+    if (authorParam === "me" && currentUser) {
+      filter.author = new mongoose.Types.ObjectId(currentUser.id);
+    }
+
     if (category && category !== "All" && category !== "All Circles") {
       filter.category = category;
     }

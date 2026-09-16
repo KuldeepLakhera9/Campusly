@@ -1,5 +1,10 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
+export interface IMessageReaction {
+  user: mongoose.Types.ObjectId;
+  emoji: string;
+}
+
 export interface IMessageDocument extends Document {
   conversationId: mongoose.Types.ObjectId;
   sender: mongoose.Types.ObjectId;
@@ -11,6 +16,7 @@ export interface IMessageDocument extends Document {
   deletedAt?: Date;
   isSeen: boolean;
   seenAt?: Date | null;
+  reactions?: IMessageReaction[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -65,6 +71,21 @@ const MessageSchema = new Schema<IMessageDocument>(
       type: Date,
       default: null,
     },
+    reactions: [
+      {
+        _id: false,
+        user: {
+          type: Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+        emoji: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+      },
+    ],
   },
   {
     timestamps: true,

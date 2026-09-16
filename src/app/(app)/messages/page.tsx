@@ -29,7 +29,13 @@ import {
   ChevronDown,
   Copy,
   MessageSquare,
+  Smile,
+  X,
 } from "lucide-react";
+import { ChatMessageSkeleton, ConversationThreadSkeleton } from "@/components/ui/skeleton-loader";
+
+const REACTION_EMOJIS = ["❤️", "🔥", "😂", "👏", "👀", "💡"];
+
 
 function formatChatDateDivider(dateStr?: string | Date): string {
   if (!dateStr) return "";
@@ -82,6 +88,67 @@ export default function MessagesPage() {
   const [showScrollBottomBtn, setShowScrollBottomBtn] = React.useState(false);
   const [newMessagesWhileScrolled, setNewMessagesWhileScrolled] = React.useState(0);
   const [copiedMsgId, setCopiedMsgId] = React.useState<string | null>(null);
+
+  // In-chat search and reaction states
+  const [chatSearchQuery, setChatSearchQuery] = React.useState("");
+  const [showChatSearch, setShowChatSearch] = React.useState(false);
+  const [activeReactionMenuMsgId, setActiveReactionMenuMsgId] = React.useState<string | null>(null);
+
+  const handleToggleReaction = async (msgId: string, emoji: string) => {
+    setActiveReactionMenuMsgId(null);
+
+    // Optimistic UI update
+    setMessages((prev) =>
+      prev.map((msg) => {
+        if (msg.id !== msgId) return msg;
+        const currentReactions = msg.reactions || [];
+        const existing = currentReactions.find((r) => r.emoji === emoji);
+        let updatedReactions;
+        if (existing) {
+          if (existing.userReacted) {
+            if (existing.count <= 1) {
+              updatedReactions = currentReactions.filter((r) => r.emoji !== emoji);
+            } else {
+              updatedReactions = currentReactions.map((r) =>
+                r.emoji === emoji ? { ...r, count: r.count - 1, userReacted: false } : r
+              );
+            }
+          } else {
+            updatedReactions = currentReactions.map((r) =>
+              r.emoji === emoji ? { ...r, count: r.count + 1, userReacted: true } : r
+            );
+          }
+        } else {
+          updatedReactions = [...currentReactions, { emoji, count: 1, userReacted: true }];
+        }
+        return { ...msg, reactions: updatedReactions };
+      })
+    );
+
+    try {
+      const res = await fetch(`/api/messages/${msgId}/reactions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emoji }),
+      });
+      const data = await res.json();
+      if (res.ok && data.reactions) {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === msgId ? { ...msg, reactions: data.reactions } : msg
+          )
+        );
+      }
+    } catch (err) {
+      console.error("Reaction toggle failed:", err);
+    }
+  };
+
+  const visibleMessages = React.useMemo(() => {
+    if (!chatSearchQuery.trim()) return messages;
+    const q = chatSearchQuery.toLowerCase();
+    return messages.filter((m) => m.content.toLowerCase().includes(q));
+  }, [messages, chatSearchQuery]);
 
   // Container-isolated scroll to bottom helper (does NOT jump window/page)
   const scrollToBottom = React.useCallback((behavior: ScrollBehavior = "smooth") => {
@@ -491,9 +558,11 @@ export default function MessagesPage() {
           {/* Threads List */}
           <div className="flex-1 overflow-y-auto divide-y divide-campus-border/50">
             {isLoadingConversations ? (
-              <div className="py-12 flex flex-col items-center justify-center text-center">
-                <Loader2 className="w-6 h-6 text-campus-accent animate-spin mb-2" />
-                <span className="text-xs text-campus-muted">Loading conversations...</span>
+              <div className="divide-y divide-campus-border/40">
+                <ConversationThreadSkeleton />
+                <ConversationThreadSkeleton />
+                <ConversationThreadSkeleton />
+                <ConversationThreadSkeleton />
               </div>
             ) : filteredConversations.length > 0 ? (
               filteredConversations.map((c) => {
@@ -633,6 +702,24 @@ export default function MessagesPage() {
                   <Button
                     variant="ghost"
                     size="sm"
+                    onClick={() => {
+                      setShowChatSearch((prev) => !prev);
+                      if (showChatSearch) setChatSearchQuery("");
+                    }}
+                    className={`text-xs ${
+                      showChatSearch
+                        ? "text-campus-accent bg-campus-accent/10"
+                        : "text-campus-muted hover:text-campus-charcoal"
+                    }`}
+                    title="Search in this chat"
+                  >
+                    <Search className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Search</span>
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => setViewProfileUserId(activeConversation.otherUser.userId)}
                     className="text-xs text-campus-muted hover:text-campus-charcoal hidden sm:flex items-center gap-1"
                   >
@@ -662,6 +749,37 @@ export default function MessagesPage() {
                 </div>
               </div>
 
+              {/* In-Chat Search Bar */}
+              {showChatSearch && (
+                <div className="px-4 py-2 bg-stone-50 border-b border-campus-border/80 flex items-center gap-2 animate-in slide-in-from-top-1 shrink-0">
+                  <Search className="w-3.5 h-3.5 text-campus-muted shrink-0" />
+                  <input
+                    type="text"
+                    placeholder="Search keywords in this chat..."
+                    value={chatSearchQuery}
+                    onChange={(e) => setChatSearchQuery(e.target.value)}
+                    autoFocus
+                    className="flex-1 bg-transparent text-xs text-campus-charcoal placeholder:text-campus-subtle outline-none"
+                  />
+                  {chatSearchQuery && (
+                    <span className="text-[11px] font-medium text-campus-muted">
+                      {visibleMessages.length} {visibleMessages.length === 1 ? "match" : "matches"}
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setChatSearchQuery("");
+                      setShowChatSearch(false);
+                    }}
+                    className="p-1 text-campus-muted hover:text-campus-charcoal rounded cursor-pointer"
+                    aria-label="Close search"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+
               {/* Privacy Banner */}
               <div className="px-4 py-2 bg-stone-50 border-b border-stone-200/70 flex items-center justify-between gap-2 text-[11px] text-campus-muted shrink-0">
                 <div className="flex items-center gap-2">
@@ -679,13 +797,10 @@ export default function MessagesPage() {
                 className="flex-1 min-h-0 p-3.5 sm:p-6 overflow-y-auto overscroll-contain space-y-3 bg-campus-bg/25 relative"
               >
                 {isLoadingMessages ? (
-                  <div className="py-12 flex flex-col items-center justify-center text-center">
-                    <Loader2 className="w-6 h-6 text-campus-accent animate-spin mb-2" />
-                    <span className="text-xs text-campus-muted">Loading messages...</span>
-                  </div>
-                ) : messages.length > 0 ? (
-                  messages.map((msg, idx) => {
-                    const prevMsg = idx > 0 ? messages[idx - 1] : null;
+                  <ChatMessageSkeleton />
+                ) : visibleMessages.length > 0 ? (
+                  visibleMessages.map((msg, idx) => {
+                    const prevMsg = idx > 0 ? visibleMessages[idx - 1] : null;
                     const showDivider =
                       !prevMsg ||
                       formatChatDateDivider(msg.createdAt) !== formatChatDateDivider(prevMsg.createdAt);
@@ -705,31 +820,63 @@ export default function MessagesPage() {
                             msg.isCurrentUser ? "items-end" : "items-start"
                           }`}
                         >
-                          <div className="flex items-center gap-1.5 max-w-[85%] sm:max-w-[75%]">
-                            {/* Copy button for current user message */}
-                            {msg.isCurrentUser && !msg.isDeleted && (
-                              <button
-                                onClick={() => handleCopyMessage(msg.id, msg.content)}
-                                className="opacity-0 group-hover:opacity-100 p-1 text-campus-subtle hover:text-campus-charcoal transition-opacity cursor-pointer"
-                                title={copiedMsgId === msg.id ? "Copied!" : "Copy message"}
-                              >
-                                {copiedMsgId === msg.id ? (
-                                  <Check className="w-3.5 h-3.5 text-emerald-600" />
-                                ) : (
-                                  <Copy className="w-3.5 h-3.5" />
-                                )}
-                              </button>
-                            )}
+                          <div className="flex items-center gap-1.5 max-w-[85%] sm:max-w-[75%] relative">
+                            {/* Actions for current user message */}
+                            {msg.isCurrentUser && !msg.isDeleted && !msg.id.startsWith("temp-") && (
+                              <div className="flex items-center gap-0.5 relative">
+                                <button
+                                  onClick={() =>
+                                    setActiveReactionMenuMsgId(
+                                      activeReactionMenuMsgId === msg.id ? null : msg.id
+                                    )
+                                  }
+                                  className="opacity-0 group-hover:opacity-100 p-1 text-campus-subtle hover:text-amber-600 transition-opacity cursor-pointer"
+                                  title="Add reaction"
+                                >
+                                  <Smile className="w-3.5 h-3.5" />
+                                </button>
 
-                            {/* Action trigger for current user (Delete) */}
-                            {msg.isCurrentUser && !msg.isDeleted && (
-                              <button
-                                onClick={() => handleDeleteMessage(msg.id)}
-                                className="opacity-0 group-hover:opacity-100 p-1 text-campus-subtle hover:text-red-600 transition-opacity cursor-pointer"
-                                title="Delete message"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                                {activeReactionMenuMsgId === msg.id && (
+                                  <>
+                                    <div
+                                      className="fixed inset-0 z-20"
+                                      onClick={() => setActiveReactionMenuMsgId(null)}
+                                    />
+                                    <div className="absolute bottom-full mb-1 right-0 bg-white border border-campus-border rounded-full shadow-lg px-2 py-1 flex items-center gap-1 z-30 animate-in fade-in zoom-in-95">
+                                      {REACTION_EMOJIS.map((emoji) => (
+                                        <button
+                                          key={emoji}
+                                          type="button"
+                                          onClick={() => handleToggleReaction(msg.id, emoji)}
+                                          className="p-1 text-sm hover:scale-125 transition-transform active:scale-95"
+                                        >
+                                          {emoji}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </>
+                                )}
+
+                                <button
+                                  onClick={() => handleCopyMessage(msg.id, msg.content)}
+                                  className="opacity-0 group-hover:opacity-100 p-1 text-campus-subtle hover:text-campus-charcoal transition-opacity cursor-pointer"
+                                  title={copiedMsgId === msg.id ? "Copied!" : "Copy message"}
+                                >
+                                  {copiedMsgId === msg.id ? (
+                                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                  ) : (
+                                    <Copy className="w-3.5 h-3.5" />
+                                  )}
+                                </button>
+
+                                <button
+                                  onClick={() => handleDeleteMessage(msg.id)}
+                                  className="opacity-0 group-hover:opacity-100 p-1 text-campus-subtle hover:text-red-600 transition-opacity cursor-pointer"
+                                  title="Delete message"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             )}
 
                             <div
@@ -744,34 +891,88 @@ export default function MessagesPage() {
                               {msg.content}
                             </div>
 
-                            {/* Copy button for peer message */}
+                            {/* Actions for peer message */}
                             {!msg.isCurrentUser && !msg.isDeleted && (
-                              <button
-                                onClick={() => handleCopyMessage(msg.id, msg.content)}
-                                className="opacity-0 group-hover:opacity-100 p-1 text-campus-subtle hover:text-campus-charcoal transition-opacity cursor-pointer"
-                                title={copiedMsgId === msg.id ? "Copied!" : "Copy message"}
-                              >
-                                {copiedMsgId === msg.id ? (
-                                  <Check className="w-3.5 h-3.5 text-emerald-600" />
-                                ) : (
-                                  <Copy className="w-3.5 h-3.5" />
-                                )}
-                              </button>
-                            )}
+                              <div className="flex items-center gap-0.5 relative">
+                                <button
+                                  onClick={() =>
+                                    setActiveReactionMenuMsgId(
+                                      activeReactionMenuMsgId === msg.id ? null : msg.id
+                                    )
+                                  }
+                                  className="opacity-0 group-hover:opacity-100 p-1 text-campus-subtle hover:text-amber-600 transition-opacity cursor-pointer"
+                                  title="Add reaction"
+                                >
+                                  <Smile className="w-3.5 h-3.5" />
+                                </button>
 
-                            {/* Action trigger for peer message (Report) */}
-                            {!msg.isCurrentUser && !msg.isDeleted && (
-                              <button
-                                onClick={() =>
-                                  setReportTarget({ type: "message", id: msg.id })
-                                }
-                                className="opacity-0 group-hover:opacity-100 p-1 text-campus-subtle hover:text-amber-600 transition-opacity cursor-pointer"
-                                title="Report message"
-                              >
-                                <Flag className="w-3.5 h-3.5" />
-                              </button>
+                                {activeReactionMenuMsgId === msg.id && (
+                                  <>
+                                    <div
+                                      className="fixed inset-0 z-20"
+                                      onClick={() => setActiveReactionMenuMsgId(null)}
+                                    />
+                                    <div className="absolute bottom-full mb-1 left-0 bg-white border border-campus-border rounded-full shadow-lg px-2 py-1 flex items-center gap-1 z-30 animate-in fade-in zoom-in-95">
+                                      {REACTION_EMOJIS.map((emoji) => (
+                                        <button
+                                          key={emoji}
+                                          type="button"
+                                          onClick={() => handleToggleReaction(msg.id, emoji)}
+                                          className="p-1 text-sm hover:scale-125 transition-transform active:scale-95"
+                                        >
+                                          {emoji}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </>
+                                )}
+
+                                <button
+                                  onClick={() => handleCopyMessage(msg.id, msg.content)}
+                                  className="opacity-0 group-hover:opacity-100 p-1 text-campus-subtle hover:text-campus-charcoal transition-opacity cursor-pointer"
+                                  title={copiedMsgId === msg.id ? "Copied!" : "Copy message"}
+                                >
+                                  {copiedMsgId === msg.id ? (
+                                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                  ) : (
+                                    <Copy className="w-3.5 h-3.5" />
+                                  )}
+                                </button>
+
+                                <button
+                                  onClick={() =>
+                                    setReportTarget({ type: "message", id: msg.id })
+                                  }
+                                  className="opacity-0 group-hover:opacity-100 p-1 text-campus-subtle hover:text-amber-600 transition-opacity cursor-pointer"
+                                  title="Report message"
+                                >
+                                  <Flag className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             )}
                           </div>
+
+                          {/* Reaction Pills */}
+                          {msg.reactions && msg.reactions.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1 px-1">
+                              {msg.reactions.map((r) => (
+                                <button
+                                  key={r.emoji}
+                                  type="button"
+                                  onClick={() => handleToggleReaction(msg.id, r.emoji)}
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium border transition-all active:scale-95 cursor-pointer ${
+                                    r.userReacted
+                                      ? "bg-amber-100/90 border-amber-300 text-amber-950 font-bold shadow-2xs"
+                                      : "bg-white/90 border-campus-border text-campus-charcoal hover:bg-stone-50"
+                                  }`}
+                                  title={`React with ${r.emoji}`}
+                                >
+                                  <span>{r.emoji}</span>
+                                  <span className="text-[10px]">{r.count}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
 
                           {/* Message metadata & delivery/seen status */}
                           <div className="flex items-center gap-1.5 text-[10px] text-campus-subtle mt-1 px-1 select-none">
@@ -804,6 +1005,23 @@ export default function MessagesPage() {
                       </React.Fragment>
                     );
                   })
+                ) : chatSearchQuery ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-6 my-auto">
+                    <Search className="w-8 h-8 text-campus-muted mb-2 opacity-60" />
+                    <p className="font-serif text-sm font-semibold text-campus-charcoal mb-1">
+                      No matching messages
+                    </p>
+                    <p className="text-xs text-campus-muted max-w-xs leading-relaxed mb-3">
+                      We couldn&apos;t find any messages containing &quot;{chatSearchQuery}&quot;.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setChatSearchQuery("")}
+                      className="text-xs text-campus-accent font-semibold hover:underline cursor-pointer"
+                    >
+                      Clear search
+                    </button>
+                  </div>
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center text-center p-6 my-auto">
                     <div className="w-12 h-12 rounded-2xl bg-campus-accent/10 text-campus-accent flex items-center justify-center mb-3 shadow-2xs">

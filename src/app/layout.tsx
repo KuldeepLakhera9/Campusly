@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Newsreader } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/providers/auth-provider";
@@ -16,6 +16,13 @@ const newsreader = Newsreader({
   display: "swap",
 });
 
+export const viewport: Viewport = {
+  themeColor: "#FAF8F5",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+};
+
 export const metadata: Metadata = {
   title: "CAMPUSLY — Your campus, your circle.",
   description:
@@ -27,8 +34,15 @@ export const metadata: Metadata = {
     "pseudonymous campus",
     "verified student network",
   ],
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Campusly",
+  },
   icons: {
     icon: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
   },
 };
 

@@ -8,8 +8,10 @@ import { Avatar } from "@/components/ui/avatar";
 import { HangoutCard } from "@/components/hangouts/hangout-card";
 import { PostCard } from "@/components/feed/post-card";
 import { Footer } from "@/components/layout/footer";
-import { MOCK_HANGOUTS, MOCK_POSTS } from "@/lib/data/mock-data";
 import { generatePseudonym, PseudonymOption } from "@/lib/utils/pseudonym";
+import { IPost } from "@/types/post";
+import { IHangout } from "@/types/hangout";
+import { PostCardSkeleton, HangoutCardSkeleton } from "@/components/ui/skeleton-loader";
 import {
   ShieldCheck,
   Sparkles,
@@ -29,6 +31,44 @@ export default function LandingPage() {
     circle: "Campus Common",
   });
   const [isSpinning, setIsSpinning] = React.useState(false);
+
+  const [pulseHangout, setPulseHangout] = React.useState<IHangout | null>(null);
+  const [pulsePost, setPulsePost] = React.useState<IPost | null>(null);
+  const [isLoadingPulse, setIsLoadingPulse] = React.useState(true);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    async function loadLivePulse() {
+      try {
+        const [hangoutRes, postRes] = await Promise.all([
+          fetch("/api/hangouts?limit=1"),
+          fetch("/api/posts?limit=1"),
+        ]);
+        if (isMounted) {
+          if (hangoutRes.ok) {
+            const hData = await hangoutRes.json();
+            if (hData.hangouts && hData.hangouts.length > 0) {
+              setPulseHangout(hData.hangouts[0]);
+            }
+          }
+          if (postRes.ok) {
+            const pData = await postRes.json();
+            if (pData.posts && pData.posts.length > 0) {
+              setPulsePost(pData.posts[0]);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load live pulse:", err);
+      } finally {
+        if (isMounted) setIsLoadingPulse(false);
+      }
+    }
+    loadLivePulse();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleSpinMoniker = () => {
     setIsSpinning(true);
@@ -217,22 +257,64 @@ export default function LandingPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Sample Spontaneous Hangout */}
+            {/* Spontaneous Hangout Pulse */}
             <div className="space-y-3">
               <div className="text-xs font-bold uppercase tracking-wider text-campus-muted flex items-center gap-1.5">
                 <Flame className="w-3.5 h-3.5 text-campus-accent" />
-                <span>Spontaneous Meetup</span>
+                <span>Live Spontaneous Meetup</span>
               </div>
-              <HangoutCard hangout={MOCK_HANGOUTS[0]} />
+              {isLoadingPulse ? (
+                <HangoutCardSkeleton />
+              ) : pulseHangout ? (
+                <HangoutCard hangout={pulseHangout} />
+              ) : (
+                <div className="p-6 rounded-xl border border-dashed border-campus-border/80 bg-white text-center flex flex-col items-center justify-center min-h-[220px]">
+                  <div className="w-10 h-10 rounded-full bg-amber-50 text-campus-accent flex items-center justify-center mb-2.5">
+                    <Flame className="w-5 h-5" />
+                  </div>
+                  <h3 className="font-serif text-sm font-semibold text-campus-charcoal mb-1">
+                    No Active Meetup Right Now
+                  </h3>
+                  <p className="text-xs text-campus-muted max-w-xs mb-3 leading-relaxed">
+                    Be the first on campus to ignite a coffee run, library study block, or lawn hangout.
+                  </p>
+                  <Link href="/register">
+                    <Button size="sm" variant="primary">
+                      Host First Meetup
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </div>
 
-            {/* Sample Pseudonymous Thought */}
+            {/* Pseudonymous Thought Pulse */}
             <div className="space-y-3">
               <div className="text-xs font-bold uppercase tracking-wider text-campus-muted flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-campus-accent" />
-                <span>Pseudonymous Thought</span>
+                <span>Recent Campus Thought</span>
               </div>
-              <PostCard post={MOCK_POSTS[0]} />
+              {isLoadingPulse ? (
+                <PostCardSkeleton />
+              ) : pulsePost ? (
+                <PostCard post={pulsePost} />
+              ) : (
+                <div className="p-6 rounded-xl border border-dashed border-campus-border/80 bg-white text-center flex flex-col items-center justify-center min-h-[220px]">
+                  <div className="w-10 h-10 rounded-full bg-stone-100 text-campus-charcoal flex items-center justify-center mb-2.5">
+                    <Sparkles className="w-5 h-5" />
+                  </div>
+                  <h3 className="font-serif text-sm font-semibold text-campus-charcoal mb-1">
+                    Campus Board is Quiet
+                  </h3>
+                  <p className="text-xs text-campus-muted max-w-xs mb-3 leading-relaxed">
+                    Drop a question, thought, or story pseudonymously to start the collegiate conversation.
+                  </p>
+                  <Link href="/register">
+                    <Button size="sm" variant="primary">
+                      Share First Thought
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         </div>

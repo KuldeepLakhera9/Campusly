@@ -10,6 +10,7 @@ export interface IChatMessage {
   isDeleted?: boolean;
   isSeen?: boolean;
   seenAt?: string | null;
+  reactions?: { emoji: string; count: number; userReacted: boolean }[];
 }
 
 export interface IConversationParticipant {

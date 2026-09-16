@@ -12,9 +12,12 @@ import { Tabs } from "@/components/ui/tabs";
 import { AVATAR_PRESETS, AvatarPreset, getAvatarPreset } from "@/lib/utils/avatars";
 import { CAMPUS_INTERESTS_LIST } from "@/lib/validations/auth";
 import { CAMPUS_INTENTS_LIST } from "@/types/people";
-import { MOCK_HANGOUTS, MOCK_POSTS } from "@/lib/data/mock-data";
+import Link from "next/link";
+import { IPost } from "@/types/post";
+import { IHangout } from "@/types/hangout";
 import { HangoutCard } from "@/components/hangouts/hangout-card";
 import { PostCard } from "@/components/feed/post-card";
+import { PostCardSkeleton, HangoutCardSkeleton } from "@/components/ui/skeleton-loader";
 import {
   ShieldCheck,
   Sparkles,
@@ -44,22 +47,50 @@ export default function ProfilePage() {
   const [saveError, setSaveError] = React.useState<string | null>(null);
   const [saveSuccessMessage, setSaveSuccessMessage] = React.useState<string | null>(null);
 
-  // Load profile stats
+  // Real User Activity State
+  const [userHangouts, setUserHangouts] = React.useState<IHangout[]>([]);
+  const [userPosts, setUserPosts] = React.useState<IPost[]>([]);
+  const [isLoadingActivity, setIsLoadingActivity] = React.useState(true);
+
+  // Load profile stats and real activity
   React.useEffect(() => {
-    async function loadStats() {
+    let isMounted = true;
+    async function loadStatsAndActivity() {
       try {
-        const res = await fetch("/api/profile");
-        if (res.ok) {
-          const data = await res.json();
+        const [statsRes, postsRes, hangoutsRes] = await Promise.all([
+          fetch("/api/profile"),
+          fetch("/api/posts?author=me&limit=10"),
+          fetch("/api/hangouts?scope=created&limit=10"),
+        ]);
+
+        if (!isMounted) return;
+
+        if (statsRes.ok) {
+          const data = await statsRes.json();
           if (data.profile?.stats) {
             setStats(data.profile.stats);
           }
         }
+        if (postsRes.ok) {
+          const pData = await postsRes.json();
+          setUserPosts(pData.posts || []);
+        }
+        if (hangoutsRes.ok) {
+          const hData = await hangoutsRes.json();
+          setUserHangouts(hData.hangouts || []);
+        }
       } catch (err) {
-        console.error("Failed to load profile stats:", err);
+        console.error("Failed to load profile data or activity:", err);
+      } finally {
+        if (isMounted) {
+          setIsLoadingActivity(false);
+        }
       }
     }
-    loadStats();
+    loadStatsAndActivity();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Blocked Users state
@@ -349,22 +380,93 @@ export default function ProfilePage() {
 
       {/* Tab 1: Activity */}
       {activeTab === "activity" && (
-        <div className="space-y-6">
+        <div className="space-y-8">
           <div>
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-serif text-lg font-medium text-campus-charcoal flex items-center gap-2">
                 <Flame className="w-4 h-4 text-campus-accent" />
-                <span>Active Spontaneous Meetup</span>
+                <span>Spontaneous Meetups Hosted by You</span>
               </h2>
+              <Link href="/explore">
+                <Button size="sm" variant="outline" className="text-xs">
+                  Host New Meetup
+                </Button>
+              </Link>
             </div>
-            <HangoutCard hangout={MOCK_HANGOUTS[0]} />
+
+            {isLoadingActivity ? (
+              <HangoutCardSkeleton />
+            ) : userHangouts.length > 0 ? (
+              <div className="space-y-4">
+                {userHangouts.map((h) => (
+                  <HangoutCard key={h._id} hangout={h} />
+                ))}
+              </div>
+            ) : (
+              <div className="p-8 text-center bg-white rounded-xl border border-dashed border-campus-border/80">
+                <div className="w-10 h-10 rounded-full bg-amber-50 text-campus-accent flex items-center justify-center mx-auto mb-2.5">
+                  <Flame className="w-5 h-5" />
+                </div>
+                <h3 className="font-serif text-sm font-semibold text-campus-charcoal mb-1">
+                  No spontaneous meetups hosted yet
+                </h3>
+                <p className="text-xs text-campus-muted max-w-sm mx-auto mb-4 leading-relaxed">
+                  Free between classes? Host a quick coffee run, study group, or lawn hangout with fellow students.
+                </p>
+                <Link href="/explore">
+                  <Button size="sm" variant="primary">
+                    Host a Meetup
+                  </Button>
+                </Link>
+              </div>
+            )}
           </div>
 
           <div>
-            <h2 className="font-serif text-lg font-medium text-campus-charcoal mb-3">
-              Thoughts Shared Pseudonymously
-            </h2>
-            <PostCard post={MOCK_POSTS[0]} />
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-serif text-lg font-medium text-campus-charcoal flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-campus-accent" />
+                <span>Thoughts Shared Pseudonymously</span>
+              </h2>
+              <Link href="/explore">
+                <Button size="sm" variant="outline" className="text-xs">
+                  Share a Thought
+                </Button>
+              </Link>
+            </div>
+
+            {isLoadingActivity ? (
+              <PostCardSkeleton />
+            ) : userPosts.length > 0 ? (
+              <div className="space-y-4">
+                {userPosts.map((p) => (
+                  <PostCard
+                    key={p._id}
+                    post={p}
+                    onPostDeleted={(deletedId) =>
+                      setUserPosts((prev) => prev.filter((item) => item._id !== deletedId))
+                    }
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="p-8 text-center bg-white rounded-xl border border-dashed border-campus-border/80">
+                <div className="w-10 h-10 rounded-full bg-stone-100 text-campus-charcoal flex items-center justify-center mx-auto mb-2.5">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <h3 className="font-serif text-sm font-semibold text-campus-charcoal mb-1">
+                  No thoughts shared yet
+                </h3>
+                <p className="text-xs text-campus-muted max-w-sm mx-auto mb-4 leading-relaxed">
+                  Speak your mind freely on the campus feed with your verified pseudonymous moniker.
+                </p>
+                <Link href="/explore">
+                  <Button size="sm" variant="primary">
+                    Share Your First Thought
+                  </Button>
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       )}
